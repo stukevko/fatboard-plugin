@@ -62,13 +62,13 @@ function(fatboard_configure target)
   target_include_directories(${target} PRIVATE Source/Common)
 endfunction()
 
-# ---- Fatboard Cleanup (free) ------------------------------------------------
-juce_add_plugin(FatboardCleanup
-  PRODUCT_NAME "Fatboard Cleanup"
+# ---- Scrub (free) ------------------------------------------------
+juce_add_plugin(Scrub
+  PRODUCT_NAME "Scrub"
   COMPANY_NAME "Fatboard"
-  BUNDLE_ID "com.fatboard.cleanup"
+  BUNDLE_ID "com.fatboard.scrub"
   PLUGIN_MANUFACTURER_CODE Fatb
-  PLUGIN_CODE Fbcl
+  PLUGIN_CODE Fscr
   FORMATS ${FATBOARD_FORMATS}
   IS_SYNTH FALSE
   NEEDS_MIDI_INPUT FALSE
@@ -76,21 +76,21 @@ juce_add_plugin(FatboardCleanup
   VST3_CATEGORIES Fx EQ Dynamics
   AU_MAIN_TYPE kAudioUnitType_Effect)
 
-target_sources(FatboardCleanup PRIVATE
-  Source/Cleanup/CleanupProcessor.cpp
-  Source/Cleanup/CleanupProcessor.h
-  Source/Cleanup/CleanupEditor.cpp
-  Source/Cleanup/CleanupEditor.h
+target_sources(Scrub PRIVATE
+  Source/Scrub/CleanupProcessor.cpp
+  Source/Scrub/CleanupProcessor.h
+  Source/Scrub/CleanupEditor.cpp
+  Source/Scrub/CleanupEditor.h
   ${FATBOARD_COMMON_SOURCES})
-fatboard_configure(FatboardCleanup)
+fatboard_configure(Scrub)
 
-# ---- Fatboard Pro ------------------------------------------------------------
-juce_add_plugin(FatboardPro
-  PRODUCT_NAME "Fatboard Pro"
+# ---- Scrub Pro ------------------------------------------------------------
+juce_add_plugin(ScrubPro
+  PRODUCT_NAME "Scrub Pro"
   COMPANY_NAME "Fatboard"
-  BUNDLE_ID "com.fatboard.pro"
+  BUNDLE_ID "com.fatboard.scrubpro"
   PLUGIN_MANUFACTURER_CODE Fatb
-  PLUGIN_CODE Fbpr
+  PLUGIN_CODE Fspr
   FORMATS ${FATBOARD_FORMATS}
   IS_SYNTH FALSE
   NEEDS_MIDI_INPUT FALSE
@@ -98,13 +98,13 @@ juce_add_plugin(FatboardPro
   VST3_CATEGORIES Fx EQ Dynamics
   AU_MAIN_TYPE kAudioUnitType_Effect)
 
-target_sources(FatboardPro PRIVATE
-  Source/Pro/ProProcessor.cpp
-  Source/Pro/ProProcessor.h
-  Source/Pro/ProEditor.cpp
-  Source/Pro/ProEditor.h
+target_sources(ScrubPro PRIVATE
+  Source/ScrubPro/ProProcessor.cpp
+  Source/ScrubPro/ProProcessor.h
+  Source/ScrubPro/ProEditor.cpp
+  Source/ScrubPro/ProEditor.h
   ${FATBOARD_COMMON_SOURCES})
-fatboard_configure(FatboardPro)
+fatboard_configure(ScrubPro)
 
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)

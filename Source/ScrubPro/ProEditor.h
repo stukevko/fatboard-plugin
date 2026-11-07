@@ -21,7 +21,7 @@ private:
     ProProcessor& proc;
     FatboardLookAndFeel lnf;
 
-    FatboardHeader header { "Pro" };
+    FatboardHeader header { "Scrub Pro" };
     BigKnob cleanupKnob { "Cleanup" };
     BigKnob modeKnob { "Mode" };
     juce::TextButton modeButtons[3];

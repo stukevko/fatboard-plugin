@@ -19,7 +19,7 @@ private:
     CleanupProcessor& proc;
     FatboardLookAndFeel lnf;
 
-    FatboardHeader header { "Cleanup" };
+    FatboardHeader header { "Scrub" };
     BigKnob knob { "Amount" };
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };

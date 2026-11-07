@@ -4,7 +4,7 @@
 #include <cmath>
 
 // ============================================================================
-//  Fatboard Cleanup engine
+//  Scrub engine (Fatboard)
 //
 //  "Thin in. Fat out." – one knob.
 //

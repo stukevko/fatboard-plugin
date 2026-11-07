@@ -25,7 +25,7 @@ ProProcessor::ProProcessor()
     : AudioProcessor (BusesProperties()
                         .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                         .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "FatboardPro", makeLayout())
+      apvts (*this, nullptr, "ScrubPro", makeLayout())
 {
     cleanupParam = apvts.getRawParameterValue (kCleanup);
     modeParam    = apvts.getRawParameterValue (kMode);

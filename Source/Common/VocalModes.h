@@ -3,7 +3,7 @@
 #include <cmath>
 
 // ============================================================================
-//  Fatboard Pro – vocal modes
+//  Scrub Pro – vocal modes
 //
 //  Crisp / Clear / Soft. Each one is a whole chain, not an EQ preset:
 //     high-pass → static tone shaping → de-esser (dynamic top band)

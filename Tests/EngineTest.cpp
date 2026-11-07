@@ -1,4 +1,4 @@
-// Quick offline sanity test for the Fatboard engines.
+// Quick offline sanity test for the Scrub engines.
 // Feeds pink-ish noise with a strong 180 Hz resonance and a dull top end,
 // prints what the engine does. No audio hardware needed.
 #include <juce_dsp/juce_dsp.h>

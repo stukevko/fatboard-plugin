@@ -34,13 +34,15 @@ public:
         auto markArea = juce::Rectangle<float> (markSize, markSize).withCentre ({ r.getX() + markSize * 0.5f, r.getCentreY() });
         FatboardLookAndFeel::drawMark (g, markArea, yellow, 1.0f);
 
-        g.setColour (bone);
-        g.setFont (FatboardLookAndFeel::display (19.0f));
         auto text = r.withTrimmedLeft (markSize + 12.0f).withTrimmedRight (72.0f);
-        g.drawText ("FATBOARD", text.removeFromTop (r.getHeight() * 0.56f), juce::Justification::bottomLeft, false);
 
+        // brand small on top, product name big underneath
         g.setColour (grey);
-        g.setFont (FatboardLookAndFeel::bodyBold (11.0f));
+        g.setFont (FatboardLookAndFeel::displayBold (10.0f));
+        g.drawText ("FATBOARD", text.removeFromTop (r.getHeight() * 0.40f), juce::Justification::bottomLeft, false);
+
+        g.setColour (bone);
+        g.setFont (FatboardLookAndFeel::display (22.0f));
         g.drawText (product.toUpperCase(), text, juce::Justification::topLeft, false);
     }
 

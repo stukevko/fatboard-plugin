@@ -1,11 +1,11 @@
-# Fatboard – Cleanup & Pro (v0.1, Testbuild)
+# Scrub & Scrub Pro by Fatboard (v0.1, Testbuild)
 
 Zwei Plugins, ein Projekt, ein Look.
 
 | Plugin | Was | Preis | Bedienung |
 |---|---|---|---|
-| **Fatboard Cleanup** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
-| **Fatboard Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
+| **Scrub** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
+| **Scrub Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
 Kein Analyzer, keine Frequenzanzeige, kein Netz, kein Account – alles läuft lokal.
@@ -28,13 +28,13 @@ Voraussetzungen: **Visual Studio 2022 Community** (Workload „Desktopentwicklun
 ```bat
 cd fatboard-plugins
 cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target FatboardCleanup_All FatboardPro_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All
 ```
 
 Ergebnis:
-- `build\FatboardCleanup_artefacts\Release\VST3\Fatboard Cleanup.vst3`
-- `build\FatboardPro_artefacts\Release\VST3\Fatboard Pro.vst3`
-- `...\Release\Standalone\Fatboard Cleanup.exe` / `Fatboard Pro.exe`
+- `build\Scrub_artefacts\Release\VST3\Scrub.vst3`
+- `build\ScrubPro_artefacts\Release\VST3\Scrub Pro.vst3`
+- `...\Release\Standalone\Scrub.exe` / `Scrub Pro.exe`
 
 Die `.vst3`-Ordner nach `C:\Program Files\Common Files\VST3\` kopieren, DAW neu scannen.
 FL Studio: Options → Manage Plugins → „Find plugins".
@@ -45,17 +45,17 @@ Voraussetzungen: **Xcode** (App Store) + Command Line Tools, **CMake** (`brew in
 ```sh
 cd fatboard-plugins
 cmake -B build -G Xcode
-cmake --build build --config Release --target FatboardCleanup_All FatboardPro_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All
 ```
 
 Ergebnis in `build/*_artefacts/Release/{VST3,AU,Standalone}/`.
 VST3 → `~/Library/Audio/Plug-Ins/VST3/`, AU → `~/Library/Audio/Plug-Ins/Components/`.
-Unsignierte Builds: einmal `xattr -cr "~/Library/Audio/Plug-Ins/VST3/Fatboard Pro.vst3"` (und Cleanup), sonst blockt Gatekeeper. Für AU in Logic ggf. `killall -9 AudioComponentRegistrar` und Logic neu starten.
+Unsignierte Builds: einmal `xattr -cr "~/Library/Audio/Plug-Ins/VST3/Scrub Pro.vst3"` (und Cleanup), sonst blockt Gatekeeper. Für AU in Logic ggf. `killall -9 AudioComponentRegistrar` und Logic neu starten.
 
 ### Linux (nur zum Entwickeln)
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target FatboardCleanup_VST3 FatboardPro_VST3
+cmake --build build --target Scrub_VST3 ScrubPro_VST3
 ```
 
 ---
@@ -77,7 +77,7 @@ Ein Offline-Test ohne DAW: `cmake -B build -DFATBOARD_BUILD_TESTS=ON`, dann Targ
 
 - Palette, Fonts, Knopf, Pills, Balken-Logo: `Source/Common/FatboardLookAndFeel.*`
 - Header, großer Knopf, Aktivitäts-Logo, Footer: `Source/Common/FatboardWidgets.h`
-- Fenster/Layout: `Source/Cleanup/CleanupEditor.cpp` (420×540), `Source/Pro/ProEditor.cpp` (640×540)
+- Fenster/Layout: `Source/Scrub/CleanupEditor.cpp` (420×540), `Source/ScrubPro/ProEditor.cpp` (640×540)
 - Schriften (Unbounded Black/Bold, Inter Medium/SemiBold) sind eingebettet, Lizenz SIL OFL in `Assets/`.
 
 Die drei Balken unter dem Knopf leuchten mit der Arbeit des Plugins auf: dünner Balken = wenig, fetter Balken = viel. Das ist die einzige „Anzeige" – absichtlich.
@@ -87,8 +87,8 @@ Die drei Balken unter dem Knopf leuchten mit der Arbeit des Plugins auf: dünner
 CMakeLists.txt            beide Targets + optionaler Test
 Assets/                   Fonts (eingebettet)
 Source/Common/            Engine, Vocal-Modi, Look & Feel, Widgets
-Source/Cleanup/           Cleanup-Plugin
-Source/Pro/               Pro-Plugin
+Source/Scrub/             Scrub (free)
+Source/ScrubPro/          Scrub Pro
 Tests/EngineTest.cpp      Offline-Sanity-Test
 .github/workflows/        Win/Mac-Builds auf GitHub
 ```

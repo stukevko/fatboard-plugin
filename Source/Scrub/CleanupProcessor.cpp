@@ -18,7 +18,7 @@ CleanupProcessor::CleanupProcessor()
     : AudioProcessor (BusesProperties()
                         .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                         .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "FatboardCleanup", makeLayout())
+      apvts (*this, nullptr, "Scrub", makeLayout())
 {
     amountParam = apvts.getRawParameterValue (kAmount);
     activeParam = apvts.getRawParameterValue (kActive);
