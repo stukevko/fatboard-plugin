@@ -23,7 +23,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --config Release --target Scrub_All ScrubPro_All --parallel
+        run: cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All --parallel
 
       - name: Collect (Windows)
         if: runner.os == 'Windows'
@@ -34,6 +34,8 @@ jobs:
           Copy-Item -Recurse "build/ScrubPro_artefacts/Release/VST3/*" out/
           Copy-Item -Recurse "build/Scrub_artefacts/Release/Standalone/*" out/
           Copy-Item -Recurse "build/ScrubPro_artefacts/Release/Standalone/*" out/
+          Copy-Item -Recurse "build/Harun_artefacts/Release/VST3/*" out/
+          Copy-Item -Recurse "build/Harun_artefacts/Release/Standalone/*" out/
 
       - name: Collect (macOS)
         if: runner.os == 'macOS'
@@ -45,6 +47,9 @@ jobs:
           cp -R build/ScrubPro_artefacts/Release/AU/* out/
           cp -R build/Scrub_artefacts/Release/Standalone/* out/
           cp -R build/ScrubPro_artefacts/Release/Standalone/* out/
+          cp -R build/Harun_artefacts/Release/VST3/* out/
+          cp -R build/Harun_artefacts/Release/AU/* out/
+          cp -R build/Harun_artefacts/Release/Standalone/* out/
 
       - name: Upload
         uses: actions/upload-artifact@v4

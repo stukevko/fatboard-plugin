@@ -106,6 +106,42 @@ target_sources(ScrubPro PRIVATE
   ${FATBOARD_COMMON_SOURCES})
 fatboard_configure(ScrubPro)
 
+# ---- Harun (harmony / doubler) -----------------------------------------------
+# Pitch shifting: Signalsmith Stretch + Signalsmith Linear (both MIT, vendored in ThirdParty/)
+add_library(signalsmith INTERFACE)
+target_include_directories(signalsmith INTERFACE
+  ThirdParty/signalsmith-stretch/include
+  ThirdParty/signalsmith-linear/include)
+if(MSVC)
+  target_compile_options(signalsmith INTERFACE /bigobj)
+endif()
+
+juce_add_plugin(Harun
+  PRODUCT_NAME "Harun"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.harun"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fhar
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Pitch\ Shift
+  AU_MAIN_TYPE kAudioUnitType_Effect)
+
+target_sources(Harun PRIVATE
+  Source/Harun/HarunProcessor.cpp
+  Source/Harun/HarunProcessor.h
+  Source/Harun/HarunEditor.cpp
+  Source/Harun/HarunEditor.h
+  Source/Harun/PitchTracker.h
+  Source/Harun/HarmonyLogic.h
+  Source/Harun/HarunEngine.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Harun)
+target_link_libraries(Harun PRIVATE signalsmith)
+target_include_directories(Harun PRIVATE Source/Harun)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -114,4 +150,10 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(FatboardEngineTest PRIVATE Source/Common)
   target_compile_definitions(FatboardEngineTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(FatboardEngineTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(HarunTest PRODUCT_NAME "HarunTest")
+  target_sources(HarunTest PRIVATE Tests/HarunTest.cpp)
+  target_include_directories(HarunTest PRIVATE Source/Common Source/Harun)
+  target_compile_definitions(HarunTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(HarunTest PRIVATE juce::juce_dsp juce::juce_audio_formats signalsmith PUBLIC juce::juce_recommended_config_flags)
 endif()

@@ -42,6 +42,60 @@ FatboardLookAndFeel::FatboardLookAndFeel()
     setColour (juce::TextButton::textColourOnId, black);
     setColour (juce::TooltipWindow::backgroundColourId, panel);
     setColour (juce::TooltipWindow::textColourId, bone);
+    setColour (juce::ComboBox::backgroundColourId, panel);
+    setColour (juce::ComboBox::textColourId, bone);
+    setColour (juce::ComboBox::outlineColourId, line);
+    setColour (juce::ComboBox::arrowColourId, yellow);
+    setColour (juce::PopupMenu::backgroundColourId, panel);
+    setColour (juce::PopupMenu::textColourId, bone);
+    setColour (juce::PopupMenu::highlightedBackgroundColourId, yellow);
+    setColour (juce::PopupMenu::highlightedTextColourId, black);
+}
+
+void FatboardLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height, bool, int, int, int, int, juce::ComboBox& box)
+{
+    auto r = juce::Rectangle<float> (0, 0, (float) width, (float) height).reduced (1.0f);
+    const float radius = r.getHeight() * 0.5f;
+    g.setColour (panel);
+    g.fillRoundedRectangle (r, radius);
+    g.setColour (box.hasKeyboardFocus (true) ? yellow : line);
+    g.drawRoundedRectangle (r, radius, 1.5f);
+    // arrow
+    juce::Path p;
+    const float cx = r.getRight() - 18.0f, cy = r.getCentreY();
+    p.addTriangle (cx - 5.0f, cy - 2.5f, cx + 5.0f, cy - 2.5f, cx, cy + 3.5f);
+    g.setColour (yellow);
+    g.fillPath (p);
+}
+
+juce::Font FatboardLookAndFeel::getComboBoxFont (juce::ComboBox&) { return bodyBold (15.0f); }
+
+void FatboardLookAndFeel::positionComboBoxText (juce::ComboBox& box, juce::Label& label)
+{
+    label.setBounds (14, 1, box.getWidth() - 40, box.getHeight() - 2);
+    label.setFont (getComboBoxFont (box));
+    label.setJustificationType (juce::Justification::centredLeft);
+}
+
+void FatboardLookAndFeel::drawPopupMenuBackground (juce::Graphics& g, int width, int height)
+{
+    g.setColour (panel);
+    g.fillRoundedRectangle (0, 0, (float) width, (float) height, 12.0f);
+    g.setColour (line);
+    g.drawRoundedRectangle (0.5f, 0.5f, (float) width - 1.0f, (float) height - 1.0f, 12.0f, 1.0f);
+}
+
+void FatboardLookAndFeel::drawPopupMenuItem (juce::Graphics& g, const juce::Rectangle<int>& area, bool isSeparator, bool isActive,
+                                             bool isHighlighted, bool isTicked, bool, const juce::String& text,
+                                             const juce::String&, const juce::Drawable*, const juce::Colour*)
+{
+    if (isSeparator) { g.setColour (line); g.fillRect (area.reduced (10, 0).withHeight (1).withY (area.getCentreY())); return; }
+    auto r = area.toFloat().reduced (6.0f, 1.0f);
+    if (isHighlighted && isActive) { g.setColour (yellow); g.fillRoundedRectangle (r, r.getHeight() * 0.5f); }
+    g.setColour (isHighlighted && isActive ? black : (isActive ? bone : grey));
+    g.setFont (isTicked ? bodyBold (15.0f) : body (15.0f));
+    g.drawText (text, r.reduced (12.0f, 0.0f), juce::Justification::centredLeft, false);
+    if (isTicked) { g.setColour (isHighlighted ? black : yellow); g.fillEllipse (r.getRight() - 18.0f, r.getCentreY() - 3.0f, 6.0f, 6.0f); }
 }
 
 juce::Font FatboardLookAndFeel::getTextButtonFont (juce::TextButton&, int buttonHeight)

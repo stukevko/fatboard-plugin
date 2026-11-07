@@ -35,6 +35,16 @@ public:
     void drawButtonText (juce::Graphics&, juce::TextButton&, bool isMouseOverButton, bool isButtonDown) override;
 
     juce::Font getTextButtonFont (juce::TextButton&, int buttonHeight) override;
+
+    void drawComboBox (juce::Graphics&, int width, int height, bool isButtonDown, int buttonX, int buttonY,
+                       int buttonW, int buttonH, juce::ComboBox&) override;
+    juce::Font getComboBoxFont (juce::ComboBox&) override;
+    void positionComboBoxText (juce::ComboBox&, juce::Label&) override;
+    void drawPopupMenuItem (juce::Graphics&, const juce::Rectangle<int>& area, bool isSeparator, bool isActive,
+                            bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text,
+                            const juce::String& shortcutKeyText, const juce::Drawable* icon,
+                            const juce::Colour* textColour) override;
+    void drawPopupMenuBackground (juce::Graphics&, int width, int height) override;
     juce::Font getLabelFont (juce::Label&) override;
 
     /** Draws the three-bar mark into the given bounds. activity 0..1 lights the bars up. */

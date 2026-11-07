@@ -5,9 +5,11 @@ Zwei Plugins, ein Projekt, ein Look.
 | Plugin | Was | Preis | Bedienung |
 |---|---|---|---|
 | **Scrub** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
+| **Harun** | Harmony/Doubler: erkennt die gesungene Note, singt die Terz im Key (oder ein Double) wie eine zweite Aufnahme – Pitch-Drift, Timing, Formanten, Tone, Stereo. Latenz ~100 ms (PDC). | tbd | Key, Dur/Moll, Voice (Low/High/Both), Mode (Harmony/Double), **Blend**, **Human** |
 | **Scrub Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
+Harun nutzt für den Pitch-Shift [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch) + Linear (MIT, in `ThirdParty/` eingebettet). Pitch-Erkennung (YIN) und Harmonie-Logik sind eigener Code.
 Kein Analyzer, keine Frequenzanzeige, kein Netz, kein Account – alles läuft lokal.
 
 ---
@@ -28,7 +30,7 @@ Voraussetzungen: **Visual Studio 2022 Community** (Workload „Desktopentwicklun
 ```bat
 cd fatboard-plugins
 cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target Scrub_All ScrubPro_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All
 ```
 
 Ergebnis:
@@ -45,7 +47,7 @@ Voraussetzungen: **Xcode** (App Store) + Command Line Tools, **CMake** (`brew in
 ```sh
 cd fatboard-plugins
 cmake -B build -G Xcode
-cmake --build build --config Release --target Scrub_All ScrubPro_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All
 ```
 
 Ergebnis in `build/*_artefacts/Release/{VST3,AU,Standalone}/`.
@@ -55,7 +57,7 @@ Unsignierte Builds: einmal `xattr -cr "~/Library/Audio/Plug-Ins/VST3/Scrub Pro.v
 ### Linux (nur zum Entwickeln)
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target Scrub_VST3 ScrubPro_VST3
+cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3
 ```
 
 ---
@@ -67,6 +69,10 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
 - **`Source/Common/CleanupEngine.h` → `struct Settings`**
   Schwellen (`thresholdDb`, `thresholdLowDb`), wie viel vom Überstand weg kommt (`ratio`), Deckel (`maxCutDb`), Breite der Cuts (`bandQ`), Attack/Release, Höhen-Balance (`shelfTargetDb`, `shelfMaxDb`, `shelfStrength`).
   Faustregel: *Klingt es dünn → `ratio` runter oder `thresholdDb` hoch. Dröhnt es noch → `thresholdLowDb` runter, `maxCutLowDb` hoch.*
+
+- **`Source/Harun/HarunEngine.h` → `struct Settings`**
+  Pegel der Stimmen, Timing (Grund-Delay, Wobble), Pitch-Drift, Double-Detune, Formant-Versatz, Tone-EQ, Glide zwischen Noten, Shifter-Qualität/Latenz (`stretchBlockSec`). `PitchTracker.h → Settings` für Erkennungs-Schwelle und Bereich.
+  Offline-Test: Target `HarunTest`, optional mit Pfad: `HarunTest out.wav` schreibt die synthetische Stimme mit Harmony zum Anhören.
 
 - **`Source/Common/VocalModes.h` → `Crisp`, `Clear`, `Soft`**
   Pro Modus: HPF, Low-Shelf, Low-Mid-Cut, Box-Cut, Presence, High-Shelf, De-Esser (Frequenz, max. Cut, Schwelle), Sättigung (`drive`), Trim. Der Mode-Knopf skaliert alle dB-Werte und die Sättigung.
@@ -89,6 +95,8 @@ Assets/                   Fonts (eingebettet)
 Source/Common/            Engine, Vocal-Modi, Look & Feel, Widgets
 Source/Scrub/             Scrub (free)
 Source/ScrubPro/          Scrub Pro
+Source/Harun/             Harun (Engine, PitchTracker, HarmonyLogic, UI)
+ThirdParty/               Signalsmith Stretch + Linear (MIT)
 Tests/EngineTest.cpp      Offline-Sanity-Test
 .github/workflows/        Win/Mac-Builds auf GitHub
 ```
