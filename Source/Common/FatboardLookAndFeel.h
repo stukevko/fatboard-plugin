@@ -1,0 +1,46 @@
+#pragma once
+#include <juce_gui_basics/juce_gui_basics.h>
+
+// ============================================================================
+//  Fatboard look – black, one signal yellow, extremely fat type.
+//  Palette and fonts in one place so every plugin matches the website.
+// ============================================================================
+namespace FatboardColours
+{
+    const juce::Colour black   { 0xFF0B0B0B };
+    const juce::Colour panel   { 0xFF141414 };
+    const juce::Colour line    { 0xFF262626 };
+    const juce::Colour ring    { 0xFF222222 };
+    const juce::Colour yellow  { 0xFFF5E100 };
+    const juce::Colour bone    { 0xFFF3F1EC };
+    const juce::Colour grey    { 0xFF8A877F };
+    const juce::Colour dim     { 0xFF4A4840 };
+}
+
+class FatboardLookAndFeel : public juce::LookAndFeel_V4
+{
+public:
+    FatboardLookAndFeel();
+
+    static juce::Font display (float height);   // Unbounded Black
+    static juce::Font displayBold (float height); // Unbounded Bold
+    static juce::Font body (float height);      // Inter Medium
+    static juce::Font bodyBold (float height);  // Inter SemiBold
+
+    void drawRotarySlider (juce::Graphics&, int x, int y, int w, int h, float sliderPos,
+                           float rotaryStartAngle, float rotaryEndAngle, juce::Slider&) override;
+
+    void drawButtonBackground (juce::Graphics&, juce::Button&, const juce::Colour& backgroundColour,
+                               bool isMouseOverButton, bool isButtonDown) override;
+    void drawButtonText (juce::Graphics&, juce::TextButton&, bool isMouseOverButton, bool isButtonDown) override;
+
+    juce::Font getTextButtonFont (juce::TextButton&, int buttonHeight) override;
+    juce::Font getLabelFont (juce::Label&) override;
+
+    /** Draws the three-bar mark into the given bounds. activity 0..1 lights the bars up. */
+    static void drawMark (juce::Graphics&, juce::Rectangle<float> bounds, juce::Colour colour, float activity = 1.0f);
+
+private:
+    static juce::Typeface::Ptr unboundedBlack, unboundedBold, interMedium, interSemiBold;
+    static void loadTypefaces();
+};

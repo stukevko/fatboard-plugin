@@ -1,0 +1,53 @@
+name: Build Fatboard plugins
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+          - os: macos-latest
+            name: macOS
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --target FatboardCleanup_All FatboardPro_All --parallel
+
+      - name: Collect (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Copy-Item -Recurse "build/FatboardCleanup_artefacts/Release/VST3/*" out/
+          Copy-Item -Recurse "build/FatboardPro_artefacts/Release/VST3/*" out/
+          Copy-Item -Recurse "build/FatboardCleanup_artefacts/Release/Standalone/*" out/
+          Copy-Item -Recurse "build/FatboardPro_artefacts/Release/Standalone/*" out/
+
+      - name: Collect (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p out
+          cp -R build/FatboardCleanup_artefacts/Release/VST3/* out/
+          cp -R build/FatboardPro_artefacts/Release/VST3/* out/
+          cp -R build/FatboardCleanup_artefacts/Release/AU/* out/
+          cp -R build/FatboardPro_artefacts/Release/AU/* out/
+          cp -R build/FatboardCleanup_artefacts/Release/Standalone/* out/
+          cp -R build/FatboardPro_artefacts/Release/Standalone/* out/
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Fatboard-${{ matrix.name }}
+          path: out/
