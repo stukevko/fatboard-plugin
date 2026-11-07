@@ -106,3 +106,17 @@ Tests/EngineTest.cpp      Offline-Sanity-Test
 - Kein Oversampling bei der Sättigung (bei hohem Mode-Amount leichte Aliasing-Spitzen möglich).
 - Kein Resizing des Fensters.
 - Kein AAX.
+
+## Installer
+
+**Windows** – `Fatboard-Setup-<version>.exe` (Inno Setup, wird in CI gebaut aus `installers/windows/fatboard.iss`). Installiert VST3 nach `Common Files\VST3`, optional Standalone-Apps. Unsigniert → SmartScreen einmal "Weitere Informationen → Trotzdem ausführen".
+
+**macOS** – kein `.dmg`, sondern eine Zeile im Terminal (kein Apple-Developer-Konto nötig, keine Gatekeeper-Dialoge):
+
+```sh
+curl -fsSL https://fatboard.com/mac | sh
+```
+
+Skript: `installers/mac/install.sh`. Es lädt `fatboard.com/dl/all/mac` (Weiterleitung auf das aktuelle Release-Zip), kopiert VST3 + AU in `~/Library/Audio/Plug-Ins/`, entfernt vorsorglich das Quarantäne-Flag und stößt den AU-Scan an. `FATBOARD_ONLY=scrub` installiert nur ein Plugin, `FATBOARD_SYSTEM=1` für alle Nutzer.
+
+**Release**: Tag pushen (`git tag v0.1.0 && git push --tags`) → Actions baut alles und legt ein GitHub-Release mit `.exe` und den Mac-Zips an. Die Download-URLs dann im Web-Admin (Overview → Downloads) eintragen; `/dl/<produkt>/<plattform>` zeigt darauf.
