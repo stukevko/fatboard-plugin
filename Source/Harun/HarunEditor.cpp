@@ -28,8 +28,8 @@ HarunEditor::HarunEditor (HarunProcessor& p)
     humanAtt  = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, HarunProcessor::kHuman, humanKnob.slider);
     activeAtt = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, HarunProcessor::kActive, header.power);
 
-    blendKnob.slider.setDoubleClickReturnValue (true, 0.6);
-    humanKnob.slider.setDoubleClickReturnValue (true, 0.6);
+    blendKnob.slider.setDoubleClickReturnValue (true, 0.5);
+    humanKnob.slider.setDoubleClickReturnValue (true, 0.5);
 
     setSize (640, 620);
     startTimerHz (20);
@@ -87,7 +87,7 @@ void HarunEditor::paint (juce::Graphics& g)
 
     g.setColour (grey);
     g.setFont (FatboardLookAndFeel::body (12.5f));
-    g.drawText ("Pick the key. Harun sings the third. Blend sets how loud, Human how real.", r.removeFromBottom (24), juce::Justification::centred, false);
+    g.drawText ("Pick the key. Harun doubles you left and right, a third away. Blend: how loud. Human: how loose.", r.removeFromBottom (24), juce::Justification::centred, false);
 }
 
 void HarunEditor::resized()

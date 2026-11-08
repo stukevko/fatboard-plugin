@@ -16,9 +16,9 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
     layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { HarunProcessor::kMode, 1 }, "Mode",
         juce::StringArray { "Harmony", "Double" }, 0));
     layout.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { HarunProcessor::kBlend, 1 }, "Blend",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.6f, pct));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
     layout.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { HarunProcessor::kHuman, 1 }, "Human",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.6f, pct));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
     layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { HarunProcessor::kActive, 1 }, "In", true));
     return layout;
 }
