@@ -5,6 +5,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# MSVC: compile the files of one target in parallel (VS only parallelises whole targets otherwise)
+if(MSVC)
+  add_compile_options(/MP)
+endif()
+# Link-time optimisation makes release builds a little faster at runtime but
+# doubles link time on Windows. Off for test builds, on for tagged releases.
+option(FATBOARD_LTO "Link-time optimisation" OFF)
+
 # macOS: universal binaries (Intel + Apple Silicon) when building on a Mac
 if(APPLE)
   set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
@@ -57,8 +65,10 @@ function(fatboard_configure target)
     juce::juce_dsp
     PUBLIC
     juce::juce_recommended_config_flags
-    juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags)
+  if(FATBOARD_LTO)
+    target_link_libraries(${target} PUBLIC juce::juce_recommended_lto_flags)
+  endif()
   target_include_directories(${target} PRIVATE Source/Common)
 endfunction()
 

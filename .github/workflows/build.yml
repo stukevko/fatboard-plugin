@@ -61,7 +61,10 @@ jobs:
           else echo "version=0.0.${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT; fi
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+        shell: bash
+        run: |
+          LTO=OFF; [[ "$GITHUB_REF" == refs/tags/v* ]] && LTO=ON
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DFATBOARD_LTO=$LTO
 
       - name: Build
         run: cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All --parallel
