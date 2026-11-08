@@ -6,6 +6,7 @@ Zwei Plugins, ein Projekt, ein Look.
 |---|---|---|---|
 | **Scrub** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
 | **Harun** | Harmony/Doubler: erkennt die gesungene Note, singt die Terz im Key (oder ein Double) wie eine zweite Aufnahme – Pitch-Drift, Timing, Formanten, Tone, Stereo. Latenz ~100 ms (PDC). | tbd | Key, Dur/Moll, Voice (Low/High/Both), Mode (Harmony/Double), **Blend**, **Human** |
+| **Dafocus** | Vocal-Raum: Hall (8-Linien-FDN) + Tempo-Delay auf einem gefilterten, de-essten Send, beides wird von der Stimme **geduckt** und blüht in Pausen auf. Space Tight/Room/Far, Echo Off/1/8/1/4/1/8-dot, Knöpfe **Amount**, **Duck**. BPM vom Host. | tbd | 2 Pills, 2 Knöpfe |
 | **Scrub Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
@@ -30,7 +31,7 @@ Voraussetzungen: **Visual Studio 2022 Community** (Workload „Desktopentwicklun
 ```bat
 cd fatboard-plugins
 cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All
 ```
 
 Ergebnis:
@@ -47,7 +48,7 @@ Voraussetzungen: **Xcode** (App Store) + Command Line Tools, **CMake** (`brew in
 ```sh
 cd fatboard-plugins
 cmake -B build -G Xcode
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All
 ```
 
 Ergebnis in `build/*_artefacts/Release/{VST3,AU,Standalone}/`.
@@ -57,7 +58,7 @@ Unsignierte Builds: einmal `xattr -cr "~/Library/Audio/Plug-Ins/VST3/Scrub Pro.v
 ### Linux (nur zum Entwickeln)
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3
+cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3 Dafocus_VST3
 ```
 
 ---
@@ -73,6 +74,9 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
 - **`Source/Harun/HarunEngine.h` → `struct Settings`**
   Pegel der Stimmen, Timing (Grund-Delay, Wobble), Pitch-Drift, Double-Detune, Formant-Versatz, Tone-EQ, Glide zwischen Noten, Shifter-Qualität/Latenz (`stretchBlockSec`). `PitchTracker.h → Settings` für Erkennungs-Schwelle und Bereich.
   Offline-Test: Target `HarunTest`, optional mit Pfad: `HarunTest out.wav` schreibt die synthetische Stimme mit Harmony zum Anhören.
+
+- **`Source/Dafocus/DafocusEngine.h` → `Settings` + `preset()`**
+  Send-Filter (HPF/LPF), De-Esser, Delay-Feedback und -Filter, Hall-Presets (RT60, Größe, Pre-Delay, Dämpfung, Breite), Ducking (Range, Attack, Release, Schwelle relativ zum Peak). Offline-Test: Target `DafocusTest`, optional mit WAV-Pfad.
 
 - **`Source/Common/VocalModes.h` → `Crisp`, `Clear`, `Soft`**
   Pro Modus: HPF, Low-Shelf, Low-Mid-Cut, Box-Cut, Presence, High-Shelf, De-Esser (Frequenz, max. Cut, Schwelle), Sättigung (`drive`), Trim. Der Mode-Knopf skaliert alle dB-Werte und die Sättigung.
@@ -96,6 +100,7 @@ Source/Common/            Engine, Vocal-Modi, Look & Feel, Widgets
 Source/Scrub/             Scrub (free)
 Source/ScrubPro/          Scrub Pro
 Source/Harun/             Harun (Engine, PitchTracker, HarmonyLogic, UI)
+Source/Dafocus/           Dafocus (Engine, UI)
 ThirdParty/               Signalsmith Stretch + Linear (MIT)
 Tests/EngineTest.cpp      Offline-Sanity-Test
 .github/workflows/        Win/Mac-Builds auf GitHub

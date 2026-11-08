@@ -31,7 +31,7 @@ jobs:
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All --parallel
+        run: cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All --parallel
 
       # ---------------- Windows: stage, zip, Inno Setup installer ----------------
       - name: Stage (Windows)
@@ -39,7 +39,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path out | Out-Null
-          foreach ($t in "Scrub","ScrubPro","Harun") {
+          foreach ($t in "Scrub","ScrubPro","Harun","Dafocus") {
             Copy-Item -Recurse "build/${t}_artefacts/Release/VST3/*" out/
             Copy-Item -Recurse "build/${t}_artefacts/Release/Standalone/*" out/
           }
@@ -57,7 +57,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p out
-          for t in Scrub ScrubPro Harun; do
+          for t in Scrub ScrubPro Harun Dafocus; do
             cp -R build/${t}_artefacts/Release/VST3/* out/
             cp -R build/${t}_artefacts/Release/AU/* out/
             cp -R build/${t}_artefacts/Release/Standalone/* out/
@@ -66,6 +66,7 @@ jobs:
           (cd out && zip -qr ../Fatboard-scrub-mac.zip "Scrub.vst3" "Scrub.component")
           (cd out && zip -qr ../Fatboard-scrub-pro-mac.zip "Scrub Pro.vst3" "Scrub Pro.component")
           (cd out && zip -qr ../Fatboard-harun-mac.zip "Harun.vst3" "Harun.component")
+          (cd out && zip -qr ../Fatboard-dafocus-mac.zip "Dafocus.vst3" "Dafocus.component")
           (cd out && zip -qr "../Fatboard-macOS-${{ steps.v.outputs.version }}.zip" .)
           cp "Fatboard-macOS-${{ steps.v.outputs.version }}.zip" Fatboard-all-mac.zip
 

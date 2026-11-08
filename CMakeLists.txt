@@ -142,6 +142,30 @@ fatboard_configure(Harun)
 target_link_libraries(Harun PRIVATE signalsmith)
 target_include_directories(Harun PRIVATE Source/Harun)
 
+# ---- Dafocus (vocal space: reverb + tempo delay, ducked) ----------------------
+juce_add_plugin(Dafocus
+  PRODUCT_NAME "Dafocus"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.dafocus"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fdaf
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Reverb Delay
+  AU_MAIN_TYPE kAudioUnitType_Effect)
+
+target_sources(Dafocus PRIVATE
+  Source/Dafocus/DafocusProcessor.cpp
+  Source/Dafocus/DafocusProcessor.h
+  Source/Dafocus/DafocusEditor.cpp
+  Source/Dafocus/DafocusEditor.h
+  Source/Dafocus/DafocusEngine.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Dafocus)
+target_include_directories(Dafocus PRIVATE Source/Dafocus)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -156,4 +180,10 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(HarunTest PRIVATE Source/Common Source/Harun)
   target_compile_definitions(HarunTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(HarunTest PRIVATE juce::juce_dsp juce::juce_audio_formats signalsmith PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(DafocusTest PRODUCT_NAME "DafocusTest")
+  target_sources(DafocusTest PRIVATE Tests/DafocusTest.cpp)
+  target_include_directories(DafocusTest PRIVATE Source/Common Source/Dafocus)
+  target_compile_definitions(DafocusTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(DafocusTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
 endif()
