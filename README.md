@@ -15,11 +15,12 @@ Kein Analyzer, keine Frequenzanzeige, kein Netz, kein Account – alles läuft l
 
 ---
 
-## Schnellster Weg zu Testbuilds: GitHub Actions
+## Testbuilds: GitHub Actions
 
-1. Neues (privates) GitHub-Repo anlegen, diesen Ordner pushen (Branch `main`).
-2. Reiter **Actions** → Workflow „Build Fatboard plugins" läuft automatisch (ca. 10–15 min).
-3. Unten unter **Artifacts** liegen `Fatboard-Windows.zip` und `Fatboard-macOS.zip` mit VST3, AU und Standalone.
+- **Push auf `main`** → baut nur **Windows** (mit Cache, ab dem zweiten Lauf deutlich schneller). Artifact `Fatboard-Windows` mit Setup-.exe und Zip.
+- **Mac** dazu: Actions → „Build Fatboard plugins" → **Run workflow** (Häkchen „Also build macOS" ist gesetzt). Der Mac-Build ist der langsame (~20 min, Universal-Binary).
+- **Release**: Tag `v0.1.0` pushen → Windows + Mac + GitHub-Release.
+- Reine Doku-Änderungen (`*.md`) lösen keinen Build aus; ein neuer Push bricht einen laufenden Build ab.
 
 Der Ordner `JUCE/` ist absichtlich nicht dabei (`.gitignore`) – CMake lädt JUCE 8.0.4 selbst nach.
 

@@ -4,21 +4,54 @@ on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
+    paths-ignore: [ '**.md', 'installers/mac/**', 'docs/**' ]
   workflow_dispatch:
+    inputs:
+      mac:
+        description: "Also build macOS (slow, ~20 min)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # Push to main → Windows only (fast). macOS on tags or when started by hand.
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        run: |
+          WIN='{"os":"windows-latest","name":"Windows"}'
+          MAC='{"os":"macos-latest","name":"macOS"}'
+          if [[ "$GITHUB_REF" == refs/tags/v* ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.mac }}" == "true" ]]; then
+            echo "matrix={\"include\":[$WIN,$MAC]}" >> $GITHUB_OUTPUT
+          else
+            echo "matrix={\"include\":[$WIN]}" >> $GITHUB_OUTPUT
+          fi
+
   build:
+    needs: plan
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+
+      # JUCE + unchanged plugin code don't get recompiled every run
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+            !build/**/*_artefacts
+          key: build-${{ matrix.name }}-${{ hashFiles('CMakeLists.txt') }}-${{ github.sha }}
+          restore-keys: |
+            build-${{ matrix.name }}-${{ hashFiles('CMakeLists.txt') }}-
 
       - name: Version
         id: v
