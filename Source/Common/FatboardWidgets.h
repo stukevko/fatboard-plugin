@@ -93,6 +93,7 @@ private:
 class ActivityMark : public juce::Component
 {
 public:
+    float getActivity() const { return activity; }
     void setActivity (float a)
     {
         a = juce::jlimit (0.0f, 1.0f, a);

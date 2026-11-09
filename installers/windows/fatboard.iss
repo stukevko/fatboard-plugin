@@ -58,6 +58,7 @@ Name: "scrub";    Description: "Scrub – one-knob cleanup (free)";     Types: f
 Name: "scrubpro"; Description: "Scrub Pro – cleanup + vocal modes";    Types: full custom
 Name: "harun";    Description: "Harun – harmony / doubler";            Types: full custom
 Name: "dafocus";  Description: "Dafocus – vocal space (reverb + echo, ducked)"; Types: full custom
+Name: "spit";     Description: "Spit – beatbox to drum MIDI";               Types: full custom
 Name: "standalone"; Description: "Standalone apps (test without a DAW)"; Types: full custom
 
 [Files]
@@ -66,17 +67,20 @@ Source: "{#StageDir}\Scrub.vst3\*";     DestDir: "{commoncf64}\VST3\Scrub.vst3";
 Source: "{#StageDir}\Scrub Pro.vst3\*"; DestDir: "{commoncf64}\VST3\Scrub Pro.vst3"; Flags: ignoreversion recursesubdirs createallsubdirs; Components: scrubpro
 Source: "{#StageDir}\Harun.vst3\*";     DestDir: "{commoncf64}\VST3\Harun.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: harun
 Source: "{#StageDir}\Dafocus.vst3\*";   DestDir: "{commoncf64}\VST3\Dafocus.vst3";   Flags: ignoreversion recursesubdirs createallsubdirs; Components: dafocus
+Source: "{#StageDir}\Spit.vst3\*";      DestDir: "{commoncf64}\VST3\Spit.vst3";      Flags: ignoreversion recursesubdirs createallsubdirs; Components: spit
 ; Standalone
 Source: "{#StageDir}\Scrub.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and scrub
 Source: "{#StageDir}\Scrub Pro.exe";    DestDir: "{app}"; Flags: ignoreversion; Components: standalone and scrubpro
 Source: "{#StageDir}\Harun.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and harun
 Source: "{#StageDir}\Dafocus.exe";      DestDir: "{app}"; Flags: ignoreversion; Components: standalone and dafocus
+Source: "{#StageDir}\Spit.exe";         DestDir: "{app}"; Flags: ignoreversion; Components: standalone and spit
 
 [Icons]
 Name: "{group}\Scrub";     Filename: "{app}\Scrub.exe";     Components: standalone and scrub
 Name: "{group}\Scrub Pro"; Filename: "{app}\Scrub Pro.exe"; Components: standalone and scrubpro
 Name: "{group}\Harun";     Filename: "{app}\Harun.exe";     Components: standalone and harun
 Name: "{group}\Dafocus";   Filename: "{app}\Dafocus.exe";   Components: standalone and dafocus
+Name: "{group}\Spit";      Filename: "{app}\Spit.exe";      Components: standalone and spit
 Name: "{group}\fatboard.com"; Filename: "https://fatboard.com"
 
 [Messages]

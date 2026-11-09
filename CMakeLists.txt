@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.3.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.3.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -164,6 +164,31 @@ target_sources(Dafocus PRIVATE
 fatboard_configure(Dafocus)
 target_include_directories(Dafocus PRIVATE Source/Dafocus)
 
+# ---- Spit (beatbox → drum MIDI) -----------------------------------------------
+juce_add_plugin(Spit
+  PRODUCT_NAME "Spit"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.spit"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fspt
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  NEEDS_MIDI_OUTPUT TRUE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Tools
+  AU_MAIN_TYPE kAudioUnitType_MusicEffect)
+
+target_sources(Spit PRIVATE
+  Source/Spit/SpitProcessor.cpp
+  Source/Spit/SpitProcessor.h
+  Source/Spit/SpitEditor.cpp
+  Source/Spit/SpitEditor.h
+  Source/Spit/SpitEngine.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Spit)
+target_include_directories(Spit PRIVATE Source/Spit)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -185,6 +210,12 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(DafocusTest PRIVATE Source/Common Source/Dafocus)
   target_compile_definitions(DafocusTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(DafocusTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(SpitTest PRODUCT_NAME "SpitTest")
+  target_sources(SpitTest PRIVATE Tests/SpitTest.cpp)
+  target_include_directories(SpitTest PRIVATE Source/Common Source/Spit)
+  target_compile_definitions(SpitTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(SpitTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(DafocusStress PRODUCT_NAME "DafocusStress")
   target_sources(DafocusStress PRIVATE Tests/DafocusStress.cpp)

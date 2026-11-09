@@ -7,10 +7,11 @@ Zwei Plugins, ein Projekt, ein Look.
 | **Scrub** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
 | **Harun** | Für die **aufgenommene** Double-/Harmony-Spur: macht aus einem Take den fertigen L/R-Layer – Haas-Versatz, Dekorrelation (mono-sicher), Tiefen raus, leicht gesättigt, **Auto-Level** unter dem Lead (Lead auf den Sidechain). Kein Pitching, keine Latenz. Mode Double/Harmony, Knöpfe **Amount**, **Width**, **Tuck**. | tbd | 1 Pill, 3 Knöpfe |
 | **Dafocus** | Vocal-Raum: Hall (8-Linien-FDN) + Tempo-Delay auf einem gefilterten, de-essten Send, beides wird von der Stimme **geduckt** und blüht in Pausen auf. Space Tight/Room/Far, Echo Off/1/8/1/4/1/8-dot, Knöpfe **Amount**, **Duck**. BPM vom Host. | tbd | 2 Pills, 2 Knöpfe |
+| **Spit** | Beatbox → Drum-MIDI. Erkennt Onsets (Spectral Flux + Energiesprung) und klassifiziert Kick/Snare/Hat; pro Pad per „learn" (3× vormachen) auf deine Laute kalibrierbar. Live-MIDI-Out (C1/D1/F#1) und **Take**: Record → Beatboxen → MIDI-Chip in die DAW ziehen, quantisiert mit **Tight** aufs **Grid**. Knöpfe **Sens**, **Tight**. Latenz ~43 ms (PDC). | tbd | 3 Pads, 2 Knöpfe |
 | **Scrub Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
-Farben: Scrub/Scrub Pro Gelb, Harun Orange ("Ember"), Dafocus Cyan ("Ice") – eine Familie, auf einen Blick unterscheidbar.
+Farben: Scrub/Scrub Pro Gelb, Harun Orange ("Ember"), Dafocus Cyan ("Ice"), Spit Lime – eine Familie, auf einen Blick unterscheidbar.
 Kein Analyzer, keine Frequenzanzeige, kein Netz, kein Account – alles läuft lokal.
 
 ---
@@ -32,7 +33,7 @@ Voraussetzungen: **Visual Studio 2022 Community** (Workload „Desktopentwicklun
 ```bat
 cd fatboard-plugins
 cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All Spit_All
 ```
 
 Ergebnis:
@@ -49,7 +50,7 @@ Voraussetzungen: **Xcode** (App Store) + Command Line Tools, **CMake** (`brew in
 ```sh
 cd fatboard-plugins
 cmake -B build -G Xcode
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All Spit_All
 ```
 
 Ergebnis in `build/*_artefacts/Release/{VST3,AU,Standalone}/`.
@@ -59,7 +60,7 @@ Unsignierte Builds: einmal `xattr -cr "~/Library/Audio/Plug-Ins/VST3/Scrub Pro.v
 ### Linux (nur zum Entwickeln)
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3 Dafocus_VST3
+cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3 Dafocus_VST3 Spit_VST3
 ```
 
 ---
@@ -78,6 +79,10 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
 
 - **`Source/Dafocus/DafocusEngine.h` → `Settings` + `preset()`**
   Send-Filter (HPF/LPF), De-Esser, Delay-Feedback und -Filter, Hall-Presets (RT60, Größe, Pre-Delay, Dämpfung, Breite), Ducking (Range, Attack, Release, Schwelle relativ zum Peak). Offline-Test: Target `DafocusTest`, optional mit WAV-Pfad.
+
+- **`Source/Spit/SpitEngine.h` → `Settings`, `resetPrototypes()`, `classify()`**
+  Onset: Flux-Faktor und Energiesprung-Schwelle hängen an Sens; Totzeit 70 ms; Flux-only-Onsets < 150 ms nach einem Hit werden verworfen (Kick-Sweeps). Prototypen (low/mid/high-Anteil, Zentroid) sind Startwerte – „learn" überschreibt sie pro Nutzer und wird im Preset gespeichert. Offline-Test: `SpitTest` (synthetisches Beatbox-Pattern: 40/40 erkannt, 40/40 richtig).
+  **In FL Studio:** Spit auf den Mikro-Mixer-Track; für Live-MIDI den Drum-Sampler auf Spits MIDI-Port hören lassen (Plugin-Wrapper → Output port setzen, Sampler → Input port gleich). Einfacher: Take aufnehmen und den Chip in den Piano-Roll ziehen.
 
 - **`Source/Common/VocalModes.h` → `Crisp`, `Clear`, `Soft`**
   Pro Modus: HPF, Low-Shelf, Low-Mid-Cut, Box-Cut, Presence, High-Shelf, De-Esser (Frequenz, max. Cut, Schwelle), Sättigung (`drive`), Trim. Der Mode-Knopf skaliert alle dB-Werte und die Sättigung.
@@ -102,12 +107,14 @@ Source/Scrub/             Scrub (free)
 Source/ScrubPro/          Scrub Pro
 Source/Harun/             Harun (Engine, UI)
 Source/Dafocus/           Dafocus (Engine, UI)
+Source/Spit/              Spit (Engine, UI)
 
 Tests/EngineTest.cpp      Offline-Sanity-Test
 .github/workflows/        Win/Mac-Builds auf GitHub
 ```
 
 ## Changelog
+- **v0.3.1** – Neu: **Spit** (Beatbox → Drum-MIDI).
 - **v0.3** – Scrub/Scrub Pro: Tiefen deutlich sanfter (Schwelle 2,5→3,5 dB, Deckel 14→9 dB, 90–180 Hz extra geschützt), Release 90→220 ms, Pro-Ketten weniger Low-Cut: das Lebendige der Stimme bleibt. Harun komplett neu als L/R-Layer für aufgenommene Doubles (kein Pitching). Dafocus: Hall-Netzwerk neu, mathematisch stabil, Limiter + NaN-Schutz, Stresstest (`DafocusStress`). Pro-Plugin-Farben.
 
 ## Bekannte Grenzen v0.1
