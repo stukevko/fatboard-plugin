@@ -15,6 +15,7 @@ namespace FatboardColours
     const juce::Colour ember   { 0xFFFF5A1F };   // Harun
     const juce::Colour ice     { 0xFF4FD8FF };   // Dafocus
     const juce::Colour lime    { 0xFFC8FF00 };   // Spit
+    const juce::Colour magenta { 0xFFFF3DA6 };   // Smash
     const juce::Colour bone    { 0xFFF3F1EC };
     const juce::Colour grey    { 0xFF8A877F };
     const juce::Colour dim     { 0xFF4A4840 };

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.3.1 LANGUAGES C CXX)
+project(Fatboard VERSION 0.3.2 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -189,6 +189,27 @@ target_sources(Spit PRIVATE
 fatboard_configure(Spit)
 target_include_directories(Spit PRIVATE Source/Spit)
 
+# ---- Smash (drum bus) ----------------------------------------------------------
+juce_add_plugin(Smash
+  PRODUCT_NAME "Smash"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.smash"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fsms
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Dynamics
+  AU_MAIN_TYPE kAudioUnitType_Effect)
+target_sources(Smash PRIVATE
+  Source/Smash/SmashProcessor.cpp Source/Smash/SmashProcessor.h
+  Source/Smash/SmashEditor.cpp Source/Smash/SmashEditor.h
+  Source/Smash/SmashEngine.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Smash)
+target_include_directories(Smash PRIVATE Source/Smash)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -216,6 +237,12 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(SpitTest PRIVATE Source/Common Source/Spit)
   target_compile_definitions(SpitTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(SpitTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(SmashTest PRODUCT_NAME "SmashTest")
+  target_sources(SmashTest PRIVATE Tests/SmashTest.cpp)
+  target_include_directories(SmashTest PRIVATE Source/Common Source/Smash)
+  target_compile_definitions(SmashTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(SmashTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(DafocusStress PRODUCT_NAME "DafocusStress")
   target_sources(DafocusStress PRIVATE Tests/DafocusStress.cpp)
