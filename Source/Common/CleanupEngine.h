@@ -36,25 +36,25 @@ public:
         float highestBandHz  = 9000.0f;    // TUNE
 
         // How far a band must stick out of its neighbours before we act
-        float thresholdDb        = 4.0f;   // TUNE – above ~300 Hz
-        float thresholdLowDb     = 2.5f;   // TUNE – below ~300 Hz ("boom" is cheaper to hit)
-        float ratio              = 0.75f;  // TUNE – fraction of the excess we remove
-        float maxCutDb           = 10.0f;  // TUNE – ceiling per band
-        float maxCutLowDb        = 14.0f;  // TUNE – ceiling in the boom region
-        float bandQ              = 3.2f;   // TUNE – width of each dynamic cut
+        float thresholdDb        = 4.5f;   // TUNE – above ~300 Hz
+        float thresholdLowDb     = 3.5f;   // TUNE – below ~300 Hz. v0.1 had 2.5: ate the body of the voice
+        float ratio              = 0.8f;   // TUNE – fraction of the excess we remove
+        float maxCutDb           = 8.0f;   // TUNE – ceiling per band
+        float maxCutLowDb        = 9.0f;   // TUNE – ceiling in the boom region (was 14: too deep, voice lost weight)
+        float bandQ              = 2.6f;   // TUNE – wide enough to actually catch a boom, narrow enough to leave the body
         float analysisQ          = 4.5f;   // TUNE – narrowness of the "listening" bands
         int   neighbourRadius    = 3;      // TUNE – how many bands each side define "normal"
 
         // Time constants (ms)
         float envAttackMs   = 6.0f;        // TUNE
-        float envReleaseMs  = 90.0f;       // TUNE
+        float envReleaseMs  = 220.0f;      // TUNE – was 90: followed the vibrato and flattened it
         float gainAttackMs  = 4.0f;        // TUNE
-        float gainReleaseMs = 160.0f;      // TUNE
+        float gainReleaseMs = 350.0f;      // TUNE – cuts let go slowly, no pumping on phrases
 
         // Air / harshness balance (dynamic high shelf)
         float shelfHz          = 5000.0f;  // TUNE
         float shelfTargetDb    = -8.0f;    // TUNE – wanted level of 4k-9k vs 400-2k (pink-ish)
-        float shelfMaxDb       = 4.0f;     // TUNE – never more than this up or down
+        float shelfMaxDb       = 3.0f;     // TUNE – never more than this up or down
         float shelfStrength    = 0.5f;     // TUNE – how hard we chase the target
         float shelfSmoothMs    = 700.0f;   // TUNE – slow, it's a tone decision not a transient
 
@@ -160,30 +160,39 @@ public:
             envDb[i] += (rmsDb - envDb[i]) * c;
         }
 
-        // --- 3. compare each band to its neighbours -----------------------
+        // --- 3. compare each band to the smooth spectral envelope -----------
+        // The envelope is a wide (±6 band) median-ish average with the band itself and its
+        // direct neighbours excluded, so a broad boom still "sticks out" while the natural
+        // slope of a voice does not.
         const float amount = amountSmoothed.getNextValue();
         amountSmoothed.skip (numSamples - 1);
 
         for (int i = 0; i < numBands; ++i)
         {
             float sum = 0.0f; int cnt = 0;
-            for (int k = -settings.neighbourRadius; k <= settings.neighbourRadius; ++k)
+            for (int k = -6; k <= 6; ++k)
             {
-                if (k == 0) continue;
+                if (std::abs (k) <= 1) continue;                     // exclude self + direct neighbours
                 const int j = i + k;
                 if (j < 0 || j >= numBands) continue;
                 sum += envDb[j]; ++cnt;
             }
             const float local = cnt > 0 ? sum / float (cnt) : envDb[i];
+            // a resonance also has to stick out of at least one direct neighbour (avoids cutting plateaus)
+            const float nb = juce::jmin (i > 1 ? envDb[i - 2] : 1.0e9f, i < numBands - 2 ? envDb[i + 2] : 1.0e9f);
+            const float peakiness = envDb[i] - nb;
+
             const bool  lowRegion = bandHz[i] < 300.0f;
-            const float thr = lowRegion ? settings.thresholdLowDb : settings.thresholdDb;
-            const float cap = lowRegion ? settings.maxCutLowDb    : settings.maxCutDb;
+            float thr = lowRegion ? settings.thresholdLowDb : settings.thresholdDb;
+            float cap = lowRegion ? settings.maxCutLowDb    : settings.maxCutDb;
+            // 90–180 Hz is where a voice has its weight: be extra careful there
+            if (bandHz[i] < 180.0f) { thr += 1.5f; cap *= 0.75f; }
 
             float want = 0.0f;
             if (active)
             {
                 const float excess = envDb[i] - local - thr;
-                if (excess > 0.0f)
+                if (excess > 0.0f && peakiness > 0.5f)
                     want = juce::jmin (cap, excess * settings.ratio);
             }
             want *= amount;

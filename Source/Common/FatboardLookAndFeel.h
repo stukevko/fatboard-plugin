@@ -11,7 +11,9 @@ namespace FatboardColours
     const juce::Colour panel   { 0xFF141414 };
     const juce::Colour line    { 0xFF262626 };
     const juce::Colour ring    { 0xFF222222 };
-    const juce::Colour yellow  { 0xFFF5E100 };
+    const juce::Colour yellow  { 0xFFF5E100 };   // Scrub / brand
+    const juce::Colour ember   { 0xFFFF5A1F };   // Harun
+    const juce::Colour ice     { 0xFF4FD8FF };   // Dafocus
     const juce::Colour bone    { 0xFFF3F1EC };
     const juce::Colour grey    { 0xFF8A877F };
     const juce::Colour dim     { 0xFF4A4840 };
@@ -20,7 +22,8 @@ namespace FatboardColours
 class FatboardLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    FatboardLookAndFeel();
+    explicit FatboardLookAndFeel (juce::Colour accentColour = FatboardColours::yellow);
+    juce::Colour accent;
 
     static juce::Font display (float height);   // Unbounded Black
     static juce::Font displayBold (float height); // Unbounded Bold
@@ -49,6 +52,13 @@ public:
 
     /** Draws the three-bar mark into the given bounds. activity 0..1 lights the bars up. */
     static void drawMark (juce::Graphics&, juce::Rectangle<float> bounds, juce::Colour colour, float activity = 1.0f);
+
+    /** Accent of the LookAndFeel a component is using (falls back to brand yellow). */
+    static juce::Colour accentOf (const juce::Component& c)
+    {
+        if (auto* l = dynamic_cast<const FatboardLookAndFeel*> (&c.getLookAndFeel())) return l->accent;
+        return FatboardColours::yellow;
+    }
 
 private:
     static juce::Typeface::Ptr unboundedBlack, unboundedBold, interMedium, interSemiBold;

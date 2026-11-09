@@ -17,23 +17,20 @@ private:
     void timerCallback() override;
 
     HarunProcessor& proc;
-    FatboardLookAndFeel lnf;
+    FatboardLookAndFeel lnf { FatboardColours::ember };
 
     FatboardHeader header { "Harun" };
-    juce::ComboBox keyBox;
-    std::unique_ptr<PillGroup> scaleGroup, voiceGroup, modeGroup;
-    BigKnob blendKnob { "Blend" };
-    BigKnob humanKnob { "Human" };
+    std::unique_ptr<PillGroup> modeGroup;
+    BigKnob amountKnob { "Amount" };
+    BigKnob widthKnob { "Width" };
+    BigKnob tuckKnob { "Tuck" };
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> keyAtt;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> blendAtt, humanAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> amountAtt, widthAtt, tuckAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt;
 
-    juce::String noteText = "-";
-    juce::Rectangle<int> keyLabelArea;
-    juce::String harmonyText;
+    bool scShown = false; float rideShown = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HarunEditor)
 };

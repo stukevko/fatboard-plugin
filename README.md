@@ -5,12 +5,12 @@ Zwei Plugins, ein Projekt, ein Look.
 | Plugin | Was | Preis | Bedienung |
 |---|---|---|---|
 | **Scrub** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
-| **Harun** | Harmony/Doubler: erkennt die gesungene Note, singt die Terz im Key (oder ein Double) wie eine zweite Aufnahme – Pitch-Drift, Timing, Formanten, Tone, Stereo. Latenz ~100 ms (PDC). | tbd | Key, Dur/Moll, Voice (Low/High/Both), Mode (Harmony/Double), **Blend**, **Human** |
+| **Harun** | Für die **aufgenommene** Double-/Harmony-Spur: macht aus einem Take den fertigen L/R-Layer – Haas-Versatz, Dekorrelation (mono-sicher), Tiefen raus, leicht gesättigt, **Auto-Level** unter dem Lead (Lead auf den Sidechain). Kein Pitching, keine Latenz. Mode Double/Harmony, Knöpfe **Amount**, **Width**, **Tuck**. | tbd | 1 Pill, 3 Knöpfe |
 | **Dafocus** | Vocal-Raum: Hall (8-Linien-FDN) + Tempo-Delay auf einem gefilterten, de-essten Send, beides wird von der Stimme **geduckt** und blüht in Pausen auf. Space Tight/Room/Far, Echo Off/1/8/1/4/1/8-dot, Knöpfe **Amount**, **Duck**. BPM vom Host. | tbd | 2 Pills, 2 Knöpfe |
 | **Scrub Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
-Harun nutzt für den Pitch-Shift [Signalsmith Stretch](https://github.com/Signalsmith-Audio/signalsmith-stretch) + Linear (MIT, in `ThirdParty/` eingebettet). Pitch-Erkennung (YIN) und Harmonie-Logik sind eigener Code.
+Farben: Scrub/Scrub Pro Gelb, Harun Orange ("Ember"), Dafocus Cyan ("Ice") – eine Familie, auf einen Blick unterscheidbar.
 Kein Analyzer, keine Frequenzanzeige, kein Netz, kein Account – alles läuft lokal.
 
 ---
@@ -73,8 +73,8 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
   Faustregel: *Klingt es dünn → `ratio` runter oder `thresholdDb` hoch. Dröhnt es noch → `thresholdLowDb` runter, `maxCutLowDb` hoch.*
 
 - **`Source/Harun/HarunEngine.h` → `struct Settings`**
-  Pegel der Stimmen, Timing (Grund-Delay, Wobble), Pitch-Drift, Double-Detune, Formant-Versatz, Tone-EQ, Glide zwischen Noten, Shifter-Qualität/Latenz (`stretchBlockSec`). `PitchTracker.h → Settings` für Erkennungs-Schwelle und Bereich.
-  Offline-Test: Target `HarunTest`, optional mit Pfad: `HarunTest out.wav` schreibt die synthetische Stimme mit Harmony zum Anhören.
+  Haas-Zeiten (8,5 / 13 ms), Tone des Layers (HPF, Low-Shelf, Presence, Air), All-Pass-Frequenzen für die Dekorrelation, Sättigung, Ziel-Pegel unter dem Lead (Double -6 dB, Harmony -8 dB), Auto-Level-Zeiten. Offline-Test: Target `HarunTest`.
+  **In der DAW:** Harun auf die Double-Spur, Lead-Spur als Sidechain-Eingang routen (FL: Mixer-Send mit Sidechain, Ableton: Sidechain-Sektion im Plugin). Ohne Sidechain pegelt Harun gegen die eigene Lautheit.
 
 - **`Source/Dafocus/DafocusEngine.h` → `Settings` + `preset()`**
   Send-Filter (HPF/LPF), De-Esser, Delay-Feedback und -Filter, Hall-Presets (RT60, Größe, Pre-Delay, Dämpfung, Breite), Ducking (Range, Attack, Release, Schwelle relativ zum Peak). Offline-Test: Target `DafocusTest`, optional mit WAV-Pfad.
@@ -100,12 +100,15 @@ Assets/                   Fonts (eingebettet)
 Source/Common/            Engine, Vocal-Modi, Look & Feel, Widgets
 Source/Scrub/             Scrub (free)
 Source/ScrubPro/          Scrub Pro
-Source/Harun/             Harun (Engine, PitchTracker, HarmonyLogic, UI)
+Source/Harun/             Harun (Engine, UI)
 Source/Dafocus/           Dafocus (Engine, UI)
-ThirdParty/               Signalsmith Stretch + Linear (MIT)
+
 Tests/EngineTest.cpp      Offline-Sanity-Test
 .github/workflows/        Win/Mac-Builds auf GitHub
 ```
+
+## Changelog
+- **v0.3** – Scrub/Scrub Pro: Tiefen deutlich sanfter (Schwelle 2,5→3,5 dB, Deckel 14→9 dB, 90–180 Hz extra geschützt), Release 90→220 ms, Pro-Ketten weniger Low-Cut: das Lebendige der Stimme bleibt. Harun komplett neu als L/R-Layer für aufgenommene Doubles (kein Pitching). Dafocus: Hall-Netzwerk neu, mathematisch stabil, Limiter + NaN-Schutz, Stresstest (`DafocusStress`). Pro-Plugin-Farben.
 
 ## Bekannte Grenzen v0.1
 - Keine Lizenzprüfung in Pro (kommt mit dem Shop: Paddle/Lemon Squeezy-Key).

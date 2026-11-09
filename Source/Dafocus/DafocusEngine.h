@@ -104,7 +104,7 @@ public:
         for (int i = 0; i < numLines; ++i)
         {
             fdn[i].base = baseMs[i] * 0.001f * (float) sr;
-            fdn[i].buf.assign ((size_t) (fdn[i].base * 1.4f + 64), 0.0f);
+            fdn[i].buf.assign ((size_t) (fdn[i].base * 1.6f + 256), 0.0f);   // room for Far (1.15×) + modulation
             fdn[i].w = 0; fdn[i].lp = 0.0f;
             fdn[i].modPhase = juce::MathConstants<float>::twoPi * (float) i / (float) numLines;
         }
@@ -194,8 +194,8 @@ public:
             {
                 echoL = readDelay (dly[0], delaySamplesSmoothed);
                 echoR = readDelay (dly[1], delaySamplesSmoothed + widthSamples);
-                const float fbL = dly[0].fbHpf.processSample (dly[0].fbLpf.processSample (echoL)) * settings.delayFeedback;
-                const float fbR = dly[1].fbHpf.processSample (dly[1].fbLpf.processSample (echoR)) * settings.delayFeedback;
+                const float fbL = flushDenormal (dly[0].fbHpf.processSample (dly[0].fbLpf.processSample (echoL))) * settings.delayFeedback;
+                const float fbR = flushDenormal (dly[1].fbHpf.processSample (dly[1].fbLpf.processSample (echoR))) * settings.delayFeedback;
                 writeDelay (dly[0], s[i] + fbL);
                 writeDelay (dly[1], s[i] + fbR);
             }
@@ -211,8 +211,8 @@ public:
             float outL = 0.0f, outR = 0.0f;
             fdnTick (x, outL, outR);
 
-            wl[i] = outL * revGain + echoL * dlyGain;
-            wr[i] = outR * revGain + echoR * dlyGain;
+            wl[i] = limit (outL * revGain + echoL * dlyGain);
+            wr[i] = limit (outR * revGain + echoR * dlyGain);
         }
 
         // ---- mix: lead untouched + wet × amount × duck ---------------------
@@ -221,7 +221,8 @@ public:
         for (int i = 0; i < n; ++i)
         {
             const float a = amountSmoothed.getNextValue() * wetMax * duckGain;
-            const float gl = wl[i] * a, gr = wr[i] * a;
+            float gl = wl[i] * a, gr = wr[i] * a;
+            if (! std::isfinite (gl) || ! std::isfinite (gr)) { gl = gr = 0.0f; panic(); }
             buffer.getWritePointer (0)[i] += nCh > 1 ? gl : 0.5f * (gl + gr);
             if (nCh > 1) buffer.getWritePointer (1)[i] += gr;
             lastWet = juce::jmax (lastWet, std::abs (gl));
@@ -236,10 +237,11 @@ public:
 
 private:
     static constexpr int numLines = 8;
+    void panic() { reset(); }
     static float coef (float ms, float blockMs) { return 1.0f - std::exp (-blockMs / ms); }
 
     struct DelayLine { std::vector<float> buf; int w = 0; juce::dsp::IIR::Filter<float> fbLpf, fbHpf; };
-    struct FdnLine   { std::vector<float> buf; int w = 0; float base = 0.0f; float lp = 0.0f; float modPhase = 0.0f; float g = 0.0f; };
+    struct FdnLine   { std::vector<float> buf; int w = 0; float base = 0.0f; float len = 0.0f; float lp = 0.0f; float modPhase = 0.0f; float g = 0.0f; };
 
     static float readDelay (DelayLine& d, float samples)
     {
@@ -254,14 +256,14 @@ private:
     {
         const auto& p = preset (s);
         space = s;
-        preDelaySamples = juce::jlimit (1, (int) preDelay.size() - 1, (int) (p.preDelayMs * 0.001f * (float) sr));
+        preDelaySamples = juce::jlimit (1, juce::jmax (1, (int) preDelay.size() - 1), (int) (p.preDelayMs * 0.001f * (float) sr));
         dampCoef = std::exp (-juce::MathConstants<float>::twoPi * p.dampHz / (float) sr);
         width = p.width;
         for (int i = 0; i < numLines; ++i)
         {
-            const float len = fdn[i].base * p.sizeScale;
-            fdn[i].g = std::pow (10.0f, -3.0f * len / (p.rt60Sec * (float) sr));   // per-pass gain for RT60
+            const float len = juce::jlimit (16.0f, (float) fdn[i].buf.size() - 8.0f, fdn[i].base * p.sizeScale);
             fdn[i].len = len;
+            fdn[i].g = juce::jmin (0.985f, std::pow (10.0f, -3.0f * len / (p.rt60Sec * (float) sr)));   // per-pass gain for RT60, never ~1
             if (force) { std::fill (fdn[i].buf.begin(), fdn[i].buf.end(), 0.0f); fdn[i].lp = 0.0f; }
         }
         revGain = juce::Decibels::decibelsToGain (settings.reverbLevelDb) * 0.35f;   // FDN is hot; normalise
@@ -269,37 +271,52 @@ private:
 
     void fdnTick (float x, float& outL, float& outR)
     {
-        // read 8 lines (modulated), damp, scale
+        // Stability: Householder matrix is orthonormal (energy preserving), every line is
+        // multiplied by g < 1 AND low-passed (one-pole, |H| <= 1) → loop gain is strictly < 1
+        // for every frequency, whatever the modulation does. Values are clamped as a last resort.
         float v[numLines];
         for (int i = 0; i < numLines; ++i)
         {
             auto& l = fdn[i];
             l.modPhase += juce::MathConstants<float>::twoPi * settings.modHz * (1.0f + 0.07f * (float) i) / (float) sr;
             if (l.modPhase > juce::MathConstants<float>::twoPi) l.modPhase -= juce::MathConstants<float>::twoPi;
-            const float d = juce::jlimit (2.0f, (float) l.buf.size() - 3.0f, l.len + std::sin (l.modPhase) * settings.modDepthSamples);
             const int len = (int) l.buf.size();
+            const float d = juce::jlimit (2.0f, (float) len - 3.0f, l.len + std::sin (l.modPhase) * settings.modDepthSamples);
             float rp = (float) l.w - d; if (rp < 0) rp += (float) len;
             const int i0 = (int) rp; const float fr = rp - (float) i0; const int i1 = (i0 + 1) % len;
             float y = l.buf[(size_t) i0] + (l.buf[(size_t) i1] - l.buf[(size_t) i0]) * fr;
-            l.lp += (y - l.lp) * (1.0f - dampCoef);          // one-pole damping (high frequencies die first)
-            v[i] = l.lp * l.g;
+            l.lp = y + dampCoef * (l.lp - y);                 // one-pole LP, gain <= 1 at every frequency
+            l.lp = flushDenormal (l.lp);
+            v[i] = l.lp * l.g;                                // g < 1 by construction
         }
-        // Householder feedback matrix: y = v - (2/N) * sum(v)
         float sum = 0.0f; for (int i = 0; i < numLines; ++i) sum += v[i];
-        const float k = 2.0f / (float) numLines * sum;
+        const float k = (2.0f / (float) numLines) * sum;
         for (int i = 0; i < numLines; ++i)
         {
             auto& l = fdn[i];
-            const float fb = v[i] - k;
-            l.buf[(size_t) l.w] = x + fb;
+            float w = x + (v[i] - k);
+            w = juce::jlimit (-4.0f, 4.0f, w);                // last-resort clamp: can never run away
+            l.buf[(size_t) l.w] = w;
             l.w = (l.w + 1) % (int) l.buf.size();
         }
-        // stereo taps: alternating signs for decorrelation
         const float a = v[0] + v[2] + v[4] + v[6];
         const float b = v[1] + v[3] + v[5] + v[7];
         const float mid = (a + b) * 0.5f, side = (a - b) * 0.5f * width;
         outL = mid + side; outR = mid - side;
     }
+
+    static float flushDenormal (float v) { return std::abs (v) < 1.0e-20f ? 0.0f : v; }
+
+    /** Simple wet-path safety limiter: never lets the space exceed ~-1 dBFS even if everything stacks up. */
+    float limit (float v)
+    {
+        const float a = std::abs (v);
+        if (a > limEnv) limEnv = a; else limEnv += (a - limEnv) * 0.0005f;
+        const float ceiling = 0.89f;
+        const float g = limEnv > ceiling ? ceiling / limEnv : 1.0f;
+        return v * g;
+    }
+    float limEnv = 0.0f;
 
     double sr = 48000.0; int channels = 2; double bpm = 120.0;
     juce::AudioBuffer<float> send, wet;
@@ -310,8 +327,7 @@ private:
 
     DelayLine dly[2]; float delaySamplesSmoothed = 0.0f;
     std::vector<float> preDelay; int preW = 0; int preDelaySamples = 1;
-    struct FdnLineEx : FdnLine { float len = 0.0f; };
-    std::array<FdnLineEx, numLines> fdn;
+    std::array<FdnLine, numLines> fdn;
     float dampCoef = 0.5f, width = 1.0f, revGain = 0.3f;
 
     Space space = Space::Room; Echo echo = Echo::Eighth;

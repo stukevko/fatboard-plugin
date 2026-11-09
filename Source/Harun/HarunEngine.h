@@ -1,73 +1,67 @@
 #pragma once
 #include <juce_dsp/juce_dsp.h>
-#include "signalsmith-stretch/signalsmith-stretch.h"
-#include "PitchTracker.h"
-#include "HarmonyLogic.h"
 #include <array>
 #include <vector>
-#include <random>
+#include <cmath>
 
 // ============================================================================
-//  Harun engine – "sing once"  (v0.2 – the "sounds like a take" pass)
+//  Harun v1 – the double/harmony track, finished
 //
-//  Harun is ALWAYS a left/right doubler: two voices, one hard-ish left, one
-//  hard-ish right. In Harmony mode both sing the chosen interval (or, with
-//  "Both", the third above left and the third below right). In Double mode
-//  they sing unison, slightly detuned. The lead stays in the middle.
+//  You recorded the double (or the harmony). Put Harun on THAT track. It turns
+//  the single take into the wide, tucked-in L/R layer a mixer would build by
+//  hand – without the hand:
 //
-//  What changed from v0.1 after listening feedback ("too pitched, angular"):
-//   - timing wobble was a chorus in disguise (±5 ms @0.23 Hz = ±12 cents of
-//     pitch modulation) → now ±1.2 ms, very slow. Drift 9 → 4 cents.
-//   - the harmony interval could flip between +3/+4 semitones while the
-//     singer slides → degree changes now need to persist (hysteresis) and
-//     jump instead of gliding (a real singer jumps, glides sound synthetic)
-//   - formant base is no longer fed from the tracker every block (warble);
-//     formants are preserved by the shifter, colour nudge is tiny
-//   - less low end in the voices (HPF 200 Hz + low shelf), a touch brighter
-//   - default a few dB quieter, both voices panned wide
+//    in ─┬─► L path: short delay a, tone, saturation ─► pan L
+//        └─► R path: short delay b, all-pass colour,  ─► pan R
+//                    tone, saturation
+//                                     × auto level (vs. the lead on the sidechain,
+//                                       or vs. the track's own loudness)
 //
-//  All TUNE values live in Settings.
+//  What makes it sound "mixed":
+//   - two slightly different arrival times (Haas) → width without phase smear
+//   - an all-pass "colour" on one side → the sides decorrelate, mono stays clean
+//   - the low end is taken out and the top rolled a touch → layer sits behind
+//   - a hair of saturation glues it to the lead
+//   - AUTO LEVEL: the layer follows the lead's loudness (sidechain) a few dB
+//     under it, so it never pokes out and never vanishes
+//
+//  No pitch shifting, no detection, zero latency. One knob (Amount), one
+//  Width, and a Tuck knob for how far under the lead it sits.
+//
+//  All TUNE values in Settings.
 // ============================================================================
 
 class HarunEngine
 {
 public:
-    enum class Mode  { Harmony = 0, Double = 1 };
-    enum class Voice { Low = 0, High = 1, Both = 2 };
+    enum class Mode { Double = 0, Harmony = 1 };     // Harmony: a bit darker, further back, less wide
 
     struct Settings
     {
-        // levels (vs. lead, at Blend = 100 %)
-        float harmonyLevelDb = -8.0f;     // TUNE
-        float doubleLevelDb  = -5.0f;     // TUNE
-        // stereo: 1.0 = hard L/R, 0 = centre
-        float width = 0.85f;              // TUNE
-        // timing (ms)
-        float baseDelayMsL = 14.0f;       // TUNE
-        float baseDelayMsR = 21.0f;       // TUNE
-        float delayWobbleMs = 1.2f;       // TUNE – × Human. Keep tiny: this is pitch modulation!
-        float wobbleHz = 0.07f;           // TUNE
-        // pitch (cents)
-        float driftCents = 4.0f;          // TUNE – × Human
-        float doubleDetuneCents = 6.0f;   // TUNE – ± per side in Double mode, × Human
-        // formants (semitones) × Human – tiny colour difference per side
-        float formantNudge = 0.35f;       // TUNE
-        // tone of the generated voices
-        float hpfHz = 200.0f;             // TUNE
-        float lowShelfHz = 320.0f;        // TUNE
-        float lowShelfDb = -3.0f;         // TUNE
-        float scoopHz = 2600.0f;          // TUNE
-        float scoopDb = -1.5f;            // TUNE
-        float shelfHz = 8000.0f;          // TUNE
-        float shelfDb = -1.5f;            // TUNE
-        // note changes: how long a new degree must persist before we jump (ms)
-        float degreeHoldMs = 45.0f;       // TUNE
-        float shiftGlideMs = 3.0f;        // TUNE – near-instant; smoothing only against zipper
-        // pitch shifter
-        float stretchBlockSec = 0.10f;    // TUNE – smaller = tighter transients, more latency-friendly
-        float stretchIntervalSec = 0.025f;// TUNE
-        float tonalityLimitHz = 8000.0f;  // TUNE – formant preservation ceiling
-        float gateDb = -55.0f;
+        // timing (ms) – Haas offsets. Small! 20+ ms starts to sound like a slap.
+        float delayLMs = 8.5f;              // TUNE
+        float delayRMs = 13.0f;             // TUNE
+        float wobbleMs = 0.35f;             // TUNE – tiny, slow movement so it isn't static
+        float wobbleHz = 0.05f;             // TUNE
+        // tone of the layer
+        float hpfHz = 160.0f;               // TUNE – Double
+        float hpfHzHarmony = 220.0f;        // TUNE – Harmony sits further back
+        float lowShelfHz = 300.0f;  float lowShelfDb = -2.0f;      // TUNE
+        float presenceHz = 3200.0f; float presenceDb = -1.5f;      // TUNE – the lead owns the presence
+        float airHz = 9000.0f;      float airDb = -2.0f;           // TUNE
+        float airDbHarmony = -3.5f;                                // TUNE
+        // decorrelation: all-pass chain on R (frequency-dependent phase, flat magnitude)
+        float allpassHz[3] = { 420.0f, 1600.0f, 5200.0f };         // TUNE
+        // saturation (0..1 drive at Amount = 1)
+        float drive = 0.25f;                // TUNE
+        // level
+        float layerDbDouble  = -6.0f;       // TUNE – under the lead at Tuck = 50 %
+        float layerDbHarmony = -8.0f;       // TUNE
+        float tuckRangeDb    = 10.0f;       // TUNE – Tuck knob range (0 % = +5 dB louder than default, 100 % = -5 dB)
+        float followAttackMs = 25.0f;       // TUNE – auto level follows the lead this fast
+        float followReleaseMs = 180.0f;     // TUNE
+        float followMaxDb = 12.0f;          // TUNE – never ride more than this
+        float gateDb = -60.0f;
     };
     Settings settings;
 
@@ -75,210 +69,167 @@ public:
     {
         sr = sampleRate; channels = juce::jlimit (1, 2, numChannels);
         mono.setSize (1, maxBlockSize);
-        tracker.prepare (sr);
-
+        const int maxDelay = (int) (sr * 0.04);
         for (int i = 0; i < 2; ++i)
         {
-            auto& v = voices[(size_t) i];
-            v.stretch.configure (1, (int) (sr * settings.stretchBlockSec), (int) (sr * settings.stretchIntervalSec), false);
-            v.stretch.reset();
-            v.stretch.setFormantBase (0.0f);                 // auto-detect; no per-block jitter from the tracker
-            v.out.assign ((size_t) maxBlockSize, 0.0f);
-            v.delay.assign ((size_t) (sr * 0.06), 0.0f);
-            v.delayWrite = 0;
-            v.hpf.coefficients   = juce::dsp::IIR::Coefficients<float>::makeHighPass  (sr, settings.hpfHz, 0.707f);
-            v.low.coefficients   = juce::dsp::IIR::Coefficients<float>::makeLowShelf  (sr, settings.lowShelfHz, 0.7f, juce::Decibels::decibelsToGain (settings.lowShelfDb));
-            v.scoop.coefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sr, settings.scoopHz, 1.0f, juce::Decibels::decibelsToGain (settings.scoopDb));
-            v.shelf.coefficients = juce::dsp::IIR::Coefficients<float>::makeHighShelf (sr, settings.shelfHz, 0.7f, juce::Decibels::decibelsToGain (settings.shelfDb));
-            v.hpf.reset(); v.low.reset(); v.scoop.reset(); v.shelf.reset();
-            v.shift = 0.0f; v.targetShift = 0.0f; v.candidateShift = 0.0f; v.candidateMs = 0.0f; v.gain = 0.0f;
-            v.lfoPhase = uni (rng) * juce::MathConstants<float>::twoPi;
-            v.driftPhaseA = uni (rng) * juce::MathConstants<float>::twoPi;
-            v.driftPhaseB = uni (rng) * juce::MathConstants<float>::twoPi;
+            auto& p = path[(size_t) i];
+            p.delay.assign ((size_t) maxDelay, 0.0f); p.w = 0;
+            p.hpf.coefficients  = juce::dsp::IIR::Coefficients<float>::makeHighPass  (sr, settings.hpfHz, 0.707f);
+            p.low.coefficients  = juce::dsp::IIR::Coefficients<float>::makeLowShelf  (sr, settings.lowShelfHz, 0.7f, juce::Decibels::decibelsToGain (settings.lowShelfDb));
+            p.pres.coefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sr, settings.presenceHz, 1.0f, juce::Decibels::decibelsToGain (settings.presenceDb));
+            p.air.coefficients  = juce::dsp::IIR::Coefficients<float>::makeHighShelf (sr, settings.airHz, 0.7f, juce::Decibels::decibelsToGain (settings.airDb));
+            for (int k = 0; k < 3; ++k)
+            {
+                p.ap[k].coefficients = juce::dsp::IIR::Coefficients<float>::makeAllPass (sr, settings.allpassHz[k], 0.6f);
+                p.ap[k].reset();
+            }
+            p.hpf.reset(); p.low.reset(); p.pres.reset(); p.air.reset();
+            p.lfoPhase = (float) i * 1.7f;
         }
-
-        latency = voices[0].stretch.inputLatency() + voices[0].stretch.outputLatency();
-        dryDelay.setSize (2, latency + maxBlockSize + 8);
-        dryDelay.clear(); dryWrite = 0;
-
-        midiHistory.assign ((size_t) juce::jmax (1, (latency + maxBlockSize) / 64 + 4), 0.0f);
-        midiHistWrite = 0;
-        midiSmoothed = 60.0f; inputEnvDb = -100.0f; lastVoicedMidi = 60.0f;
+        applyMode (mode, true);
+        layerEnvDb = -100.0f; leadEnvDb = -100.0f; followGain = 1.0f; outGain = 0.0f;
     }
 
     void reset()
     {
-        tracker.reset();
-        for (auto& v : voices) { v.stretch.reset(); std::fill (v.delay.begin(), v.delay.end(), 0.0f); v.hpf.reset(); v.low.reset(); v.scoop.reset(); v.shelf.reset(); }
-        dryDelay.clear();
+        for (auto& p : path) { std::fill (p.delay.begin(), p.delay.end(), 0.0f); p.hpf.reset(); p.low.reset(); p.pres.reset(); p.air.reset(); for (auto& a : p.ap) a.reset(); }
+        layerEnvDb = -100.0f; leadEnvDb = -100.0f; followGain = 1.0f;
     }
 
-    int getLatencySamples() const { return latency; }
-
-    void setParams (int keyIn, Harmony::Scale scaleIn, Voice voiceIn, Mode modeIn, float blendIn, float humanIn)
+    void setParams (Mode m, float amountIn, float widthIn, float tuckIn, bool sidechainPresent)
     {
-        key = keyIn; scale = scaleIn; voice = voiceIn; mode = modeIn;
-        blend = juce::jlimit (0.0f, 1.0f, blendIn); human = juce::jlimit (0.0f, 1.0f, humanIn);
+        if (m != mode) applyMode (m, false);
+        amount = juce::jlimit (0.0f, 1.0f, amountIn);
+        width  = juce::jlimit (0.0f, 1.0f, widthIn);
+        tuck   = juce::jlimit (0.0f, 1.0f, tuckIn);
+        hasSidechain = sidechainPresent;
     }
 
-    void process (juce::AudioBuffer<float>& buffer)
+    /** `lead` may be null (no sidechain): the layer then follows its own loudness. */
+    void process (juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<float>* lead)
     {
         const int n = buffer.getNumSamples();
         if (n == 0) return;
         const int nCh = juce::jmin (channels, buffer.getNumChannels());
         const float blockMs = 1000.0f * (float) n / (float) sr;
 
-        // ---- mono analysis signal --------------------------------------
+        // ---- mono source of the layer ----------------------------------------
         auto* m = mono.getWritePointer (0);
         juce::FloatVectorOperations::copy (m, buffer.getReadPointer (0), n);
         if (nCh > 1) { juce::FloatVectorOperations::add (m, buffer.getReadPointer (1), n); juce::FloatVectorOperations::multiply (m, 0.5f, n); }
 
-        float e = 0.0f; for (int i = 0; i < n; ++i) e += m[i] * m[i];
-        const float inDb = juce::Decibels::gainToDecibels (std::sqrt (e / (float) n) + 1.0e-9f);
-        inputEnvDb += (inDb - inputEnvDb) * (inDb > inputEnvDb ? coef (5.0f, blockMs) : coef (120.0f, blockMs));
-
-        // ---- pitch tracking -----------------------------------------------
-        tracker.push (m, n);
-        if (tracker.isVoiced())
+        // ---- envelopes ---------------------------------------------------------
+        const float layerDb = rmsDb (m, n);
+        layerEnvDb += (layerDb - layerEnvDb) * (layerDb > layerEnvDb ? coef (settings.followAttackMs, blockMs) : coef (settings.followReleaseMs, blockMs));
+        float leadDb = -100.0f;
+        if (lead != nullptr && lead->getNumChannels() > 0 && lead->getNumSamples() >= n)
         {
-            const float midi = Harmony::hzToMidi (tracker.getF0());
-            const bool octaveGlitch = std::abs (std::abs (midi - lastVoicedMidi) - 12.0f) < 0.7f;
-            if (! octaveGlitch) lastVoicedMidi = midi;
-            midiSmoothed += (lastVoicedMidi - midiSmoothed) * coef (8.0f, blockMs);
+            double acc = 0.0; const int lc = lead->getNumChannels();
+            for (int ch = 0; ch < lc; ++ch) { const float* l = lead->getReadPointer (ch); for (int i = 0; i < n; ++i) acc += l[i] * l[i]; }
+            leadDb = juce::Decibels::gainToDecibels ((float) std::sqrt (acc / (double) (n * lc)) + 1.0e-9f);
+            leadEnvDb += (leadDb - leadEnvDb) * (leadDb > leadEnvDb ? coef (settings.followAttackMs, blockMs) : coef (settings.followReleaseMs, blockMs));
         }
-        midiHistory[(size_t) midiHistWrite] = midiSmoothed;
-        midiHistWrite = (midiHistWrite + 1) % (int) midiHistory.size();
-        const int lagSamples = juce::jmax (0, voices[0].stretch.inputLatency() - tracker.getLatencySamples());
-        const int lagBlocks  = juce::jmin ((int) midiHistory.size() - 1, lagSamples / juce::jmax (1, n));
-        const float midiForShift = midiHistory[(size_t) (((midiHistWrite - 1 - lagBlocks) % (int) midiHistory.size() + (int) midiHistory.size()) % (int) midiHistory.size())];
-        currentNoteMidi = midiSmoothed;
 
-        const float silence = inputEnvDb < settings.gateDb ? 0.0f : 1.0f;
-        const float levelDb = mode == Mode::Harmony ? settings.harmonyLevelDb : settings.doubleLevelDb;
+        // ---- auto level ----------------------------------------------------------
+        // target: layer sits `layerDb + tuck offset` under the lead. Without a sidechain the
+        // layer just gets a gentle levelling against its own long-term loudness.
+        const float tuckDb = (0.5f - tuck) * settings.tuckRangeDb;                 // +5 .. -5
+        const float targetUnderDb = (mode == Mode::Double ? settings.layerDbDouble : settings.layerDbHarmony) + tuckDb;
+        float ride = 0.0f;
+        if (hasSidechain && leadEnvDb > settings.gateDb && layerEnvDb > settings.gateDb)
+            ride = (leadEnvDb + targetUnderDb) - layerEnvDb;                        // dB we need to add (or remove)
+        else if (layerEnvDb > settings.gateDb)
+            ride = (longTermDb + targetUnderDb + 6.0f) - layerEnvDb;                 // mild self-levelling
+        ride = juce::jlimit (-settings.followMaxDb, settings.followMaxDb, ride);
+        const float wantFollow = juce::Decibels::decibelsToGain (ride);
+        followGain += (wantFollow - followGain) * coef (wantFollow < followGain ? settings.followAttackMs : settings.followReleaseMs, blockMs);
+        if (layerEnvDb > settings.gateDb) longTermDb += (layerEnvDb - longTermDb) * coef (3000.0f, blockMs);
 
-        // ---- two voices, always: L and R -----------------------------------
-        for (int vi = 0; vi < 2; ++vi)
+        const float wantOut = amount;
+        outGain += (wantOut - outGain) * coef (20.0f, blockMs);
+
+        // ---- two paths ---------------------------------------------------------
+        const float drv = 1.0f + settings.drive * amount * 4.0f;
+        const float wet = settings.drive * amount;
+        for (int side = 0; side < 2; ++side)
         {
-            auto& v = voices[(size_t) vi];
-            const float targetGain = silence * blend * juce::Decibels::decibelsToGain (levelDb);
-            v.gain += (targetGain - v.gain) * coef (30.0f, blockMs);
-            v.active = v.gain > 1.0e-4f || targetGain > 0.0f;
-            if (! v.active) continue;
-
-            // --- what should this side sing? ---
-            float wanted = 0.0f;
-            float formantSemis = (vi == 0 ? 1.0f : -1.0f) * settings.formantNudge * human;
-            if (mode == Mode::Harmony)
-            {
-                Harmony::Interval iv;
-                if (voice == Voice::Both) iv = (vi == 0) ? Harmony::Interval::ThirdAbove : Harmony::Interval::ThirdBelow;
-                else                      iv = (voice == Voice::High) ? Harmony::Interval::ThirdAbove : Harmony::Interval::ThirdBelow;
-                wanted = Harmony::shiftFor (midiForShift, key, scale, iv);
-            }
-            else
-            {
-                wanted = (vi == 0 ? -1.0f : 1.0f) * settings.doubleDetuneCents * 0.01f * human;
-            }
-
-            // --- hysteresis: a new interval must persist before we jump to it ---
-            if (std::abs (wanted - v.candidateShift) > 0.01f) { v.candidateShift = wanted; v.candidateMs = 0.0f; }
-            else v.candidateMs += blockMs;
-            const bool firstNote = (mode == Mode::Harmony && v.targetShift == 0.0f);   // nothing sung yet: take it right away
-            if (std::abs (v.candidateShift - v.targetShift) > 0.01f && (v.candidateMs >= settings.degreeHoldMs || firstNote))
-                v.targetShift = v.candidateShift;
-            v.shift += (v.targetShift - v.shift) * coef (settings.shiftGlideMs, blockMs);
-
-            // --- slow drift ---
-            v.driftPhaseA += juce::MathConstants<float>::twoPi * 0.11f * blockMs * 0.001f;
-            v.driftPhaseB += juce::MathConstants<float>::twoPi * 0.29f * blockMs * 0.001f;
-            const float drift = (0.6f * std::sin (v.driftPhaseA) + 0.4f * std::sin (v.driftPhaseB)) * settings.driftCents * 0.01f * human;
-
-            v.stretch.setTransposeSemitones (v.shift + drift, settings.tonalityLimitHz / (float) sr);
-            v.stretch.setFormantSemitones (formantSemis, true);
-
-            const float* in[1] = { m };
-            float* out[1] = { v.out.data() };
-            v.stretch.process (in, n, out, n);
-
-            // --- timing: a fixed offset per side + a very slow, tiny wander ---
-            v.lfoPhase += juce::MathConstants<float>::twoPi * settings.wobbleHz * blockMs * 0.001f;
-            if (v.lfoPhase > juce::MathConstants<float>::twoPi) v.lfoPhase -= juce::MathConstants<float>::twoPi;
-            const float baseMs = (vi == 0 ? settings.baseDelayMsL : settings.baseDelayMsR);
-            const float delayMs = baseMs + std::sin (v.lfoPhase) * settings.delayWobbleMs * human;
-            const float delaySamples = juce::jlimit (1.0f, (float) v.delay.size() - 2.0f, delayMs * 0.001f * (float) sr);
-            const int dlen = (int) v.delay.size();
+            auto& p = path[(size_t) side];
+            p.lfoPhase += juce::MathConstants<float>::twoPi * settings.wobbleHz * blockMs * 0.001f;
+            const float baseMs = side == 0 ? settings.delayLMs : settings.delayRMs;
+            const float dMs = baseMs + std::sin (p.lfoPhase) * settings.wobbleMs;
+            const float dS = juce::jlimit (1.0f, (float) p.delay.size() - 2.0f, dMs * 0.001f * (float) sr);
+            const int len = (int) p.delay.size();
+            auto* out = side == 0 ? outL.data() : outR.data();
+            if ((int) outL.size() < n) { outL.resize ((size_t) n); outR.resize ((size_t) n); out = side == 0 ? outL.data() : outR.data(); }
             for (int i = 0; i < n; ++i)
             {
-                v.delay[(size_t) v.delayWrite] = v.out[(size_t) i];
-                float rp = (float) v.delayWrite - delaySamples;
-                if (rp < 0) rp += (float) dlen;
-                const int i0 = (int) rp; const float fr = rp - (float) i0;
-                const int i1 = (i0 + 1) % dlen;
-                float y = v.delay[(size_t) i0] + (v.delay[(size_t) i1] - v.delay[(size_t) i0]) * fr;
-                y = v.hpf.processSample (y);
-                y = v.low.processSample (y);
-                y = v.scoop.processSample (y);
-                y = v.shelf.processSample (y);
-                v.out[(size_t) i] = y * v.gain;
-                v.delayWrite = (v.delayWrite + 1) % dlen;
+                p.delay[(size_t) p.w] = m[i];
+                float rp = (float) p.w - dS; if (rp < 0) rp += (float) len;
+                const int i0 = (int) rp; const float fr = rp - (float) i0; const int i1 = (i0 + 1) % len;
+                float y = p.delay[(size_t) i0] + (p.delay[(size_t) i1] - p.delay[(size_t) i0]) * fr;
+                p.w = (p.w + 1) % len;
+                if (side == 1) for (auto& a : p.ap) y = a.processSample (y);      // colour one side → decorrelated
+                y = p.hpf.processSample (y);
+                y = p.low.processSample (y);
+                y = p.pres.processSample (y);
+                y = p.air.processSample (y);
+                const float sat = std::tanh (y * drv) / drv;
+                y = y + (sat - y) * wet;
+                out[i] = y;
             }
         }
 
-        // ---- lead delayed by shifter latency, voices panned L / R -----------
-        const int dl = dryDelay.getNumSamples();
-        const float w = settings.width;
-        const float gSame = 0.5f + 0.5f * w, gOther = 0.5f - 0.5f * w;   // equal-power-ish pan
-        for (int ch = 0; ch < nCh; ++ch)
+        // ---- replace the track with the finished layer ---------------------------
+        const float g = followGain * outGain;
+        const float same = 0.5f + 0.5f * width, other = 0.5f - 0.5f * width;
+        for (int i = 0; i < n; ++i)
         {
-            auto* d = buffer.getWritePointer (ch);
-            auto* ring = dryDelay.getWritePointer (ch);
-            int wr = dryWrite;
-            const float gL = nCh < 2 ? 0.7f : (ch == 0 ? gSame : gOther);
-            const float gR = nCh < 2 ? 0.7f : (ch == 0 ? gOther : gSame);
-            for (int i = 0; i < n; ++i)
+            const float l = outL[(size_t) i] * g, r = outR[(size_t) i] * g;
+            const float dryL = buffer.getReadPointer (0)[i];
+            const float dryR = nCh > 1 ? buffer.getReadPointer (1)[i] : dryL;
+            // Amount blends from the untouched track (0) to the finished layer (1)
+            if (nCh > 1)
             {
-                ring[wr] = d[i];
-                int r = wr - latency; if (r < 0) r += dl;
-                float y = ring[r];
-                if (voices[0].active) y += voices[0].out[(size_t) i] * gL;
-                if (voices[1].active) y += voices[1].out[(size_t) i] * gR;
-                d[i] = y;
-                wr = (wr + 1) % dl;
+                buffer.getWritePointer (0)[i] = dryL * (1.0f - outGain) + (l * same + r * other);
+                buffer.getWritePointer (1)[i] = dryR * (1.0f - outGain) + (r * same + l * other);
             }
+            else buffer.getWritePointer (0)[i] = dryL * (1.0f - outGain) + 0.5f * (l + r);
         }
-        dryWrite = (dryWrite + n) % dl;
     }
 
     // ---- UI ---------------------------------------------------------------
-    bool  isVoiced() const         { return tracker.isVoiced(); }
-    float getNoteMidi() const      { return currentNoteMidi; }
-    float getVoiceShift (int i) const { return voices[(size_t) juce::jlimit (0, 1, i)].targetShift; }
-    float getActivity() const      { return juce::jlimit (0.0f, 1.0f, (voices[0].gain + voices[1].gain) * 1.5f); }
+    float getRideDb() const { return juce::Decibels::gainToDecibels (followGain); }
+    bool  usingSidechain() const { return hasSidechain && leadEnvDb > settings.gateDb; }
+    float getActivity() const { return juce::jlimit (0.0f, 1.0f, outGain * (layerEnvDb > settings.gateDb ? 1.0f : 0.2f)); }
 
 private:
     static float coef (float ms, float blockMs) { return 1.0f - std::exp (-blockMs / ms); }
+    static float rmsDb (const float* x, int n) { double a = 0; for (int i = 0; i < n; ++i) a += x[i] * x[i]; return juce::Decibels::gainToDecibels ((float) std::sqrt (a / (double) n) + 1.0e-9f); }
 
-    struct VoiceState
+    void applyMode (Mode m, bool)
     {
-        signalsmith::stretch::SignalsmithStretch<float> stretch { 1234 };
-        std::vector<float> out, delay;
-        int delayWrite = 0;
-        juce::dsp::IIR::Filter<float> hpf, low, scoop, shelf;
-        float shift = 0.0f, targetShift = 0.0f, candidateShift = 0.0f, candidateMs = 0.0f, gain = 0.0f;
-        float lfoPhase = 0.0f, driftPhaseA = 0.0f, driftPhaseB = 0.0f;
-        bool active = false;
+        mode = m;
+        const bool h = (m == Mode::Harmony);
+        for (auto& p : path)
+        {
+            *p.hpf.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, h ? settings.hpfHzHarmony : settings.hpfHz, 0.707f);
+            *p.air.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (sr, settings.airHz, 0.7f, juce::Decibels::decibelsToGain (h ? settings.airDbHarmony : settings.airDb));
+        }
+    }
+
+    struct Path
+    {
+        std::vector<float> delay; int w = 0;
+        juce::dsp::IIR::Filter<float> hpf, low, pres, air, ap[3];
+        float lfoPhase = 0.0f;
     };
 
-    double sr = 48000.0; int channels = 2; int latency = 0;
-    juce::AudioBuffer<float> mono, dryDelay; int dryWrite = 0;
-    PitchTracker tracker;
-    std::array<VoiceState, 2> voices;
-    std::vector<float> midiHistory; int midiHistWrite = 0;
-    float midiSmoothed = 60.0f, lastVoicedMidi = 60.0f, currentNoteMidi = 60.0f, inputEnvDb = -100.0f;
-
-    int key = 0; Harmony::Scale scale = Harmony::Scale::Minor; Voice voice = Voice::High; Mode mode = Mode::Harmony;
-    float blend = 0.5f, human = 0.5f;
-
-    std::mt19937 rng { 42 };
-    std::uniform_real_distribution<float> uni { 0.0f, 1.0f };
+    double sr = 48000.0; int channels = 2;
+    juce::AudioBuffer<float> mono;
+    std::vector<float> outL, outR;
+    std::array<Path, 2> path;
+    Mode mode = Mode::Double;
+    float amount = 1.0f, width = 0.8f, tuck = 0.5f;
+    bool hasSidechain = false;
+    float layerEnvDb = -100.0f, leadEnvDb = -100.0f, longTermDb = -20.0f, followGain = 1.0f, outGain = 0.0f;
 };

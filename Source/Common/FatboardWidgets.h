@@ -33,7 +33,7 @@ public:
         auto r = getLocalBounds().toFloat();
         const float markSize = 30.0f;
         auto markArea = juce::Rectangle<float> (markSize, markSize).withCentre ({ r.getX() + markSize * 0.5f, r.getCentreY() });
-        FatboardLookAndFeel::drawMark (g, markArea, yellow, 1.0f);
+        FatboardLookAndFeel::drawMark (g, markArea, FatboardLookAndFeel::accentOf (*this), 1.0f);
 
         auto text = r.withTrimmedLeft (markSize + 12.0f).withTrimmedRight (72.0f);
 
@@ -103,7 +103,7 @@ public:
     {
         auto r = getLocalBounds().toFloat();
         const float s = juce::jmin (r.getWidth(), r.getHeight());
-        FatboardLookAndFeel::drawMark (g, juce::Rectangle<float> (s, s).withCentre (r.getCentre()), FatboardColours::yellow, activity);
+        FatboardLookAndFeel::drawMark (g, juce::Rectangle<float> (s, s).withCentre (r.getCentre()), FatboardLookAndFeel::accentOf (*this), activity);
     }
 
 private:
@@ -122,7 +122,7 @@ public:
         auto r = getLocalBounds().toFloat();
         g.setColour (line);
         g.fillRect (r.removeFromTop (1.0f));
-        g.setColour (yellow);
+        g.setColour (FatboardLookAndFeel::accentOf (*this));
         g.setFont (FatboardLookAndFeel::displayBold (11.0f));
         g.drawText ("FETT. BRETT.", r, juce::Justification::centredLeft, false);
         g.setColour (grey);

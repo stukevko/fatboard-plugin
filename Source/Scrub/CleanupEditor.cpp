@@ -43,7 +43,7 @@ void CleanupEditor::paint (juce::Graphics& g)
     g.setFont (FatboardLookAndFeel::display (30.0f));
     auto claim = r.removeFromTop (74);
     g.drawText ("THIN IN.", claim.removeFromTop (37), juce::Justification::centredLeft, false);
-    g.setColour (yellow);
+    g.setColour (lnf.accent);
     g.drawText ("FAT OUT.", claim, juce::Justification::centredLeft, false);
 
     // hint under the knob

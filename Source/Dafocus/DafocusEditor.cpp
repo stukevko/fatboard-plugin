@@ -3,7 +3,7 @@
 using namespace FatboardColours;
 
 DafocusEditor::DafocusEditor (DafocusProcessor& p)
-    : AudioProcessorEditor (&p), proc (p)
+    : AudioProcessorEditor (&p), proc (p), lnf (FatboardColours::ice)
 {
     setLookAndFeel (&lnf);
     addAndMakeVisible (header);
@@ -50,7 +50,7 @@ void DafocusEditor::paint (juce::Graphics& g)
     g.setColour (bone);
     g.setFont (FatboardLookAndFeel::display (30.0f));
     g.drawText ("UP FRONT.", left.removeFromTop (37), juce::Justification::centredLeft, false);
-    g.setColour (yellow);
+    g.setColour (lnf.accent);
     g.drawText ("IN THE ROOM.", left, juce::Justification::centredLeft, false);
 
     // duck meter: a bar that gets pushed down while singing
@@ -62,7 +62,7 @@ void DafocusEditor::paint (juce::Graphics& g)
     g.setColour (ring);
     g.fillRoundedRectangle (bar, 6.0f);
     const float open = juce::jlimit (0.0f, 1.0f, duckShown);
-    g.setColour (yellow);
+    g.setColour (lnf.accent);
     g.fillRoundedRectangle (bar.withWidth (bar.getWidth() * open).withX (bar.getRight() - bar.getWidth() * open), 6.0f);
     g.setColour (grey);
     g.setFont (FatboardLookAndFeel::body (11.0f));

@@ -28,16 +28,16 @@ juce::Font FatboardLookAndFeel::displayBold (float h) { loadTypefaces(); return 
 juce::Font FatboardLookAndFeel::body (float h)        { loadTypefaces(); return fontFor (interMedium, h); }
 juce::Font FatboardLookAndFeel::bodyBold (float h)    { loadTypefaces(); return fontFor (interSemiBold, h); }
 
-FatboardLookAndFeel::FatboardLookAndFeel()
+FatboardLookAndFeel::FatboardLookAndFeel (juce::Colour accentColour) : accent (accentColour)
 {
     loadTypefaces();
     setColour (juce::ResizableWindow::backgroundColourId, black);
-    setColour (juce::Slider::rotarySliderFillColourId, yellow);
+    setColour (juce::Slider::rotarySliderFillColourId, accent);
     setColour (juce::Slider::rotarySliderOutlineColourId, ring);
-    setColour (juce::Slider::thumbColourId, yellow);
+    setColour (juce::Slider::thumbColourId, accent);
     setColour (juce::Label::textColourId, bone);
     setColour (juce::TextButton::buttonColourId, panel);
-    setColour (juce::TextButton::buttonOnColourId, yellow);
+    setColour (juce::TextButton::buttonOnColourId, accent);
     setColour (juce::TextButton::textColourOffId, bone);
     setColour (juce::TextButton::textColourOnId, black);
     setColour (juce::TooltipWindow::backgroundColourId, panel);
@@ -45,10 +45,10 @@ FatboardLookAndFeel::FatboardLookAndFeel()
     setColour (juce::ComboBox::backgroundColourId, panel);
     setColour (juce::ComboBox::textColourId, bone);
     setColour (juce::ComboBox::outlineColourId, line);
-    setColour (juce::ComboBox::arrowColourId, yellow);
+    setColour (juce::ComboBox::arrowColourId, accent);
     setColour (juce::PopupMenu::backgroundColourId, panel);
     setColour (juce::PopupMenu::textColourId, bone);
-    setColour (juce::PopupMenu::highlightedBackgroundColourId, yellow);
+    setColour (juce::PopupMenu::highlightedBackgroundColourId, accent);
     setColour (juce::PopupMenu::highlightedTextColourId, black);
 }
 
@@ -58,13 +58,13 @@ void FatboardLookAndFeel::drawComboBox (juce::Graphics& g, int width, int height
     const float radius = r.getHeight() * 0.5f;
     g.setColour (panel);
     g.fillRoundedRectangle (r, radius);
-    g.setColour (box.hasKeyboardFocus (true) ? yellow : line);
+    g.setColour (box.hasKeyboardFocus (true) ? accent : line);
     g.drawRoundedRectangle (r, radius, 1.5f);
     // arrow
     juce::Path p;
     const float cx = r.getRight() - 18.0f, cy = r.getCentreY();
     p.addTriangle (cx - 5.0f, cy - 2.5f, cx + 5.0f, cy - 2.5f, cx, cy + 3.5f);
-    g.setColour (yellow);
+    g.setColour (accent);
     g.fillPath (p);
 }
 
@@ -91,11 +91,11 @@ void FatboardLookAndFeel::drawPopupMenuItem (juce::Graphics& g, const juce::Rect
 {
     if (isSeparator) { g.setColour (line); g.fillRect (area.reduced (10, 0).withHeight (1).withY (area.getCentreY())); return; }
     auto r = area.toFloat().reduced (6.0f, 1.0f);
-    if (isHighlighted && isActive) { g.setColour (yellow); g.fillRoundedRectangle (r, r.getHeight() * 0.5f); }
+    if (isHighlighted && isActive) { g.setColour (accent); g.fillRoundedRectangle (r, r.getHeight() * 0.5f); }
     g.setColour (isHighlighted && isActive ? black : (isActive ? bone : grey));
     g.setFont (isTicked ? bodyBold (15.0f) : body (15.0f));
     g.drawText (text, r.reduced (12.0f, 0.0f), juce::Justification::centredLeft, false);
-    if (isTicked) { g.setColour (isHighlighted ? black : yellow); g.fillEllipse (r.getRight() - 18.0f, r.getCentreY() - 3.0f, 6.0f, 6.0f); }
+    if (isTicked) { g.setColour (isHighlighted ? black : accent); g.fillEllipse (r.getRight() - 18.0f, r.getCentreY() - 3.0f, 6.0f, 6.0f); }
 }
 
 juce::Font FatboardLookAndFeel::getTextButtonFont (juce::TextButton&, int buttonHeight)
@@ -152,7 +152,7 @@ void FatboardLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int
     {
         juce::Path val;
         val.addCentredArc (centre.x, centre.y, radius, radius, 0.0f, startAngle, angle, true);
-        g.setColour (s.isEnabled() ? yellow : dim);
+        g.setColour (s.isEnabled() ? accent : dim);
         g.strokePath (val, juce::PathStrokeType (ringW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
@@ -169,7 +169,7 @@ void FatboardLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int
     juce::Path p;
     p.addRoundedRectangle (-pW * 0.5f, -face.getWidth() * 0.46f, pW, pLen, pW * 0.5f);
     p.applyTransform (juce::AffineTransform::rotation (angle).translated (centre));
-    g.setColour (s.isEnabled() ? yellow : dim);
+    g.setColour (s.isEnabled() ? accent : dim);
     g.fillPath (p);
 }
 
@@ -182,7 +182,7 @@ void FatboardLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button&
 
     if (on)
     {
-        g.setColour (down ? yellow.darker (0.15f) : yellow);
+        g.setColour (down ? accent.darker (0.15f) : accent);
         g.fillRoundedRectangle (r, radius);
     }
     else

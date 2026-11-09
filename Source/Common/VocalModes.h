@@ -39,9 +39,9 @@ namespace FatboardModes
     // TUNE
     static constexpr ModeParams Crisp {
         "Crisp",
-        110.0f,
-        180.0f, 0.0f,
-        300.0f, -2.5f, 1.0f,
+        90.0f,
+        180.0f, 0.5f,
+        300.0f, -1.5f, 1.0f,
         600.0f, -1.0f, 1.4f,
         3600.0f, 3.0f, 1.0f,
         9000.0f, 3.0f,
@@ -53,10 +53,10 @@ namespace FatboardModes
     // TUNE
     static constexpr ModeParams Clear {
         "Clear",
-        100.0f,
-        180.0f, 0.0f,
-        250.0f, -3.5f, 1.2f,
-        500.0f, -1.5f, 1.6f,
+        85.0f,
+        180.0f, 0.5f,
+        250.0f, -2.0f, 1.2f,
+        500.0f, -1.0f, 1.6f,
         2600.0f, 2.0f, 1.1f,
         8000.0f, 1.5f,
         7000.0f, 5.0f, 4.5f,
@@ -67,7 +67,7 @@ namespace FatboardModes
     // TUNE
     static constexpr ModeParams Soft {
         "Soft",
-        80.0f,
+        70.0f,
         180.0f, 1.5f,
         280.0f, -1.0f, 1.0f,
         0.0f,   0.0f,  1.0f,

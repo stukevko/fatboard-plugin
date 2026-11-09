@@ -83,7 +83,7 @@ void ProEditor::paint (juce::Graphics& g)
     auto claim = r.removeFromTop (74);
     auto left = claim.removeFromLeft (claim.getWidth() / 2);
     g.drawText ("THIN IN.", left.removeFromTop (37), juce::Justification::centredLeft, false);
-    g.setColour (yellow);
+    g.setColour (lnf.accent);
     g.drawText ("FAT OUT.", left, juce::Justification::centredLeft, false);
 
     // current mode hint, right of the claim

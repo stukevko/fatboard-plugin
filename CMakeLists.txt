@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.1.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -116,16 +116,7 @@ target_sources(ScrubPro PRIVATE
   ${FATBOARD_COMMON_SOURCES})
 fatboard_configure(ScrubPro)
 
-# ---- Harun (harmony / doubler) -----------------------------------------------
-# Pitch shifting: Signalsmith Stretch + Signalsmith Linear (both MIT, vendored in ThirdParty/)
-add_library(signalsmith INTERFACE)
-target_include_directories(signalsmith INTERFACE
-  ThirdParty/signalsmith-stretch/include
-  ThirdParty/signalsmith-linear/include)
-if(MSVC)
-  target_compile_options(signalsmith INTERFACE /bigobj)
-endif()
-
+# ---- Harun (L/R layer for a recorded double / harmony) -------------------------
 juce_add_plugin(Harun
   PRODUCT_NAME "Harun"
   COMPANY_NAME "Fatboard"
@@ -144,12 +135,9 @@ target_sources(Harun PRIVATE
   Source/Harun/HarunProcessor.h
   Source/Harun/HarunEditor.cpp
   Source/Harun/HarunEditor.h
-  Source/Harun/PitchTracker.h
-  Source/Harun/HarmonyLogic.h
   Source/Harun/HarunEngine.h
   ${FATBOARD_COMMON_SOURCES})
 fatboard_configure(Harun)
-target_link_libraries(Harun PRIVATE signalsmith)
 target_include_directories(Harun PRIVATE Source/Harun)
 
 # ---- Dafocus (vocal space: reverb + tempo delay, ducked) ----------------------
@@ -185,15 +173,22 @@ if(FATBOARD_BUILD_TESTS)
   target_compile_definitions(FatboardEngineTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(FatboardEngineTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
+
   juce_add_console_app(HarunTest PRODUCT_NAME "HarunTest")
   target_sources(HarunTest PRIVATE Tests/HarunTest.cpp)
   target_include_directories(HarunTest PRIVATE Source/Common Source/Harun)
   target_compile_definitions(HarunTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-  target_link_libraries(HarunTest PRIVATE juce::juce_dsp juce::juce_audio_formats signalsmith PUBLIC juce::juce_recommended_config_flags)
+  target_link_libraries(HarunTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(DafocusTest PRODUCT_NAME "DafocusTest")
   target_sources(DafocusTest PRIVATE Tests/DafocusTest.cpp)
   target_include_directories(DafocusTest PRIVATE Source/Common Source/Dafocus)
   target_compile_definitions(DafocusTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(DafocusTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(DafocusStress PRODUCT_NAME "DafocusStress")
+  target_sources(DafocusStress PRIVATE Tests/DafocusStress.cpp)
+  target_include_directories(DafocusStress PRIVATE Source/Common Source/Dafocus)
+  target_compile_definitions(DafocusStress PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(DafocusStress PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 endif()
