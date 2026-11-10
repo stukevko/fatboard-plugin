@@ -2,11 +2,12 @@
 
 using namespace FatboardColours;
 
-static const char* modeNames[3] = { "Crisp", "Clear", "Soft" };
-static const char* modeHints[3] = {
+static const char* modeNames[4] = { "Crisp", "Clear", "Soft", "Room" };
+static const char* modeHints[4] = {
     "Bites without the ice pick. For vocals that need to cut through a loud beat.",
     "Takes the blanket off. The voice sits in front of the beat.",
-    "Rounds the edges, keeps the body. For R&B and anything close."
+    "Rounds the edges, keeps the body. For R&B and anything close.",
+    "Put me on the BEAT, send the vocal to my sidechain. The beat steps aside while you rap."
 };
 
 ProEditor::ProEditor (ProProcessor& p)
@@ -21,7 +22,7 @@ ProEditor::ProEditor (ProProcessor& p)
     addAndMakeVisible (activity);
     addAndMakeVisible (footer);
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 4; ++i)
     {
         modeButtons[i].setButtonText (modeNames[i]);
         modeButtons[i].setClickingTogglesState (false);
@@ -58,15 +59,18 @@ void ProEditor::refreshModeButtons()
     int current = 1;
     if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (proc.apvts.getParameter (ProProcessor::kMode)))
         current = param->getIndex();
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 4; ++i)
         modeButtons[i].setToggleState (i == current, juce::dontSendNotification);
     repaint();
 }
 
 void ProEditor::timerCallback()
 {
-    const float total = proc.getEngine().getTotalActivity() + proc.getChain().getDeEssDb();
+    const bool roomMode = (int) proc.apvts.getRawParameterValue (ProProcessor::kMode)->load() == ProProcessor::roomModeIndex;
+    const float total = proc.getEngine().getTotalActivity() + (roomMode ? proc.getRoom().getTotalCutDb() * 1.5f : proc.getChain().getDeEssDb());
     activity.setActivity (juce::jlimit (0.0f, 1.0f, total / 18.0f));
+    const bool l = roomMode && proc.getRoom().isLinked(), v = roomMode && proc.getRoom().vocalPresent();
+    if (l != roomLinked || v != roomVocal) { roomLinked = l; roomVocal = v; repaint(); }
 }
 
 void ProEditor::paint (juce::Graphics& g)
@@ -101,7 +105,11 @@ void ProEditor::paint (juce::Graphics& g)
 
     g.setColour (grey);
     g.setFont (FatboardLookAndFeel::body (12.5f));
-    g.drawText ("Cleanup runs first. Then the mode. Double-click resets.", r.removeFromBottom (24), juce::Justification::centred, false);
+    juce::String hint = "Cleanup runs first. Then the mode. Double-click resets.";
+    if (current == ProProcessor::roomModeIndex)
+        hint = roomLinked ? (roomVocal ? "Vocal linked: making room." : "Vocal linked: waiting for the next line.")
+                          : "No vocal on the sidechain yet. Room does nothing until you link it.";
+    g.drawText (hint, r.removeFromBottom (24), juce::Justification::centred, false);
 }
 
 void ProEditor::resized()
@@ -113,8 +121,8 @@ void ProEditor::resized()
     r.removeFromBottom (24);       // hint
 
     // mode pills
-    auto pills = r.removeFromTop (56).withSizeKeepingCentre (3 * 110 + 2 * 10, 40);
-    for (int i = 0; i < 3; ++i)
+    auto pills = r.removeFromTop (56).withSizeKeepingCentre (4 * 110 + 3 * 10, 40);
+    for (int i = 0; i < 4; ++i)
     {
         modeButtons[i].setBounds (pills.removeFromLeft (110));
         pills.removeFromLeft (10);

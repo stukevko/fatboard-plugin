@@ -89,6 +89,10 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
   Pro Style: Transient-Betonung (dB), Ziel-GR, Attack/Release, Sättigung, Hi-Tamer- und Mud-Deckel. Fit-Bänder 250/1200/4000 Hz, max. 5 dB. Auto-Gain hält die Lautheit (±0,5 dB), damit nichts durch „lauter" gewinnt. Offline-Test: `SmashTest`.
   **In FL Studio:** Smash auf den Drum-Bus (Kick, Snare, Hats, Percs – **nicht** die 808). Sample-Track → Send auf den Drum-Bus mit „Sidechain to this track" → im Plugin „sample linked".
 
+- **`Source/Common/RoomCarver.h` → `Settings`** (Scrub Pro, Modus Room)
+  Bänder 300–6500 Hz mit Gewichtung (Sprache 1–4 kHz am stärksten), `maxDb` 4 pro Band (~5–6 dB im Sprachbereich bei 100 %), Attack 12 ms, Release 160 ms.
+  **In FL Studio:** zweite Scrub-Pro-Instanz auf den Beat-/Sample-Bus, Modus Room; Vocal-Track → Send auf diesen Bus → „Sidechain to this track". Mode-Knopf = wie viel Platz.
+
 - **`Source/Common/VocalModes.h` → `Crisp`, `Clear`, `Soft`**
   Pro Modus: HPF, Low-Shelf, Low-Mid-Cut, Box-Cut, Presence, High-Shelf, De-Esser (Frequenz, max. Cut, Schwelle), Sättigung (`drive`), Trim. Der Mode-Knopf skaliert alle dB-Werte und die Sättigung.
 
@@ -120,6 +124,7 @@ Tests/EngineTest.cpp      Offline-Sanity-Test
 ```
 
 ## Changelog
+- **v0.4** – Scrub Pro: neuer Modus **Room** (Plugin auf den BEAT, Vocal auf den Sidechain: der Beat weicht in 6 Bändern nur dort und nur dann aus, wo die Stimme gerade ist; ohne Sidechain bit-transparent). Clear/Crisp heben Konsonanten dynamisch an (Verständlichkeit, `articDb`). Scrub-Knopf neu skaliert (`knobScale` 0,65): 100 % klingt jetzt wie früher ~65 %, „volle Pulle" bleibt natürlich. Test: `RoomTest`.
 - **v0.3.2** – Neu: **Smash** (Drum-Bus mit Sample-Fit).
 - **v0.3.1** – Neu: **Spit** (Beatbox → Drum-MIDI).
 - **v0.3** – Scrub/Scrub Pro: Tiefen deutlich sanfter (Schwelle 2,5→3,5 dB, Deckel 14→9 dB, 90–180 Hz extra geschützt), Release 90→220 ms, Pro-Ketten weniger Low-Cut: das Lebendige der Stimme bleibt. Harun komplett neu als L/R-Layer für aufgenommene Doubles (kein Pitching). Dafocus: Hall-Netzwerk neu, mathematisch stabil, Limiter + NaN-Schutz, Stresstest (`DafocusStress`). Pro-Plugin-Farben.

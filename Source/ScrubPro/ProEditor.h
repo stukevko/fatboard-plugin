@@ -24,13 +24,15 @@ private:
     FatboardHeader header { "Scrub Pro" };
     BigKnob cleanupKnob { "Cleanup" };
     BigKnob modeKnob { "Mode" };
-    juce::TextButton modeButtons[3];
+    juce::TextButton modeButtons[4];
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> cleanupAtt, modeAmountAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt;
     juce::ParameterAttachment modeAttachment;
+
+    bool roomLinked = false, roomVocal = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProEditor)
 };

@@ -32,6 +32,7 @@ struct ModeParams
     float deEssHz,     deEssMaxDb,  deEssThresholdDb;   // dynamic cut around sibilance
     float drive;                                          // 0..1 saturation
     float outTrimDb;
+    float articDb;                                        // consonant lift (dynamic, 4.5 kHz) – intelligibility
 };
 
 namespace FatboardModes
@@ -47,7 +48,8 @@ namespace FatboardModes
         9000.0f, 3.0f,
         7200.0f, 6.0f, 4.0f,
         0.25f,
-        -0.5f
+        -0.5f,
+        2.5f
     };
 
     // TUNE
@@ -57,11 +59,12 @@ namespace FatboardModes
         180.0f, 0.5f,
         250.0f, -2.0f, 1.2f,
         500.0f, -1.0f, 1.6f,
-        2600.0f, 2.0f, 1.1f,
+        3000.0f, 2.5f, 1.0f,
         8000.0f, 1.5f,
         7000.0f, 5.0f, 4.5f,
         0.15f,
-        0.0f
+        0.0f,
+        4.0f
     };
 
     // TUNE
@@ -75,6 +78,7 @@ namespace FatboardModes
         7000.0f, -2.0f,
         6500.0f, 7.0f, 3.0f,
         0.35f,
+        0.0f,
         0.0f
     };
 
@@ -103,6 +107,10 @@ public:
             deEss[ch].coefficients    = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sr, 7000.0f, 2.0f, 1.0f);
         }
         deEssDetect.coefficients = juce::dsp::IIR::Coefficients<float>::makeBandPass (sr, 7000.0f, 2.0f);
+        articDetect.coefficients = juce::dsp::IIR::Coefficients<float>::makeBandPass (sr, 4500.0f, 0.7f);
+        for (int ch = 0; ch < 2; ++ch) artic[ch].coefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 4500.0f, 0.8f, 1.0f);
+        articCf = 1.0f - std::exp (-1.0f / (0.001f * (float) sr));      // 1 ms
+        articCs = 1.0f - std::exp (-1.0f / (0.040f * (float) sr));      // 40 ms
         reset();
         setMode (modeIndex, true);
     }
@@ -114,7 +122,7 @@ public:
             hpf[ch].reset(); lowShelf[ch].reset(); lowMid[ch].reset(); box[ch].reset();
             presence[ch].reset(); hiShelf[ch].reset(); deEss[ch].reset();
         }
-        deEssDetect.reset();
+        deEssDetect.reset(); articDetect.reset(); for (auto& a : artic) a.reset(); articFast = articSlow = 0.0f; articDb = 0.0f;
         sibEnvDb = -100.0f; broadEnvDb = -100.0f; deEssDb = 0.0f;
     }
 
@@ -146,6 +154,11 @@ public:
             float m = buffer.getReadPointer (0)[n];
             if (nCh > 1) m = 0.5f * (m + buffer.getReadPointer (1)[n]);
             const float s = deEssDetect.processSample (m);
+            // consonant detector: fast vs. slow envelope in the 3–6 kHz band
+            const float ar = std::abs (articDetect.processSample (m));
+            articFast += (ar - articFast) * (ar > articFast ? articCf : articCs);
+            articSlow += (ar - articSlow) * articCs;
+            articPeak = juce::jmax (articPeak, (articFast + 1.0e-6f) / (articSlow + 1.0e-6f));
             sib += s * s; broad += m * m;
         }
         const float blockMs = 1000.0f * float (numSamples) / float (sr);
@@ -166,6 +179,15 @@ public:
                                                                                        juce::Decibels::decibelsToGain (-deEssDb));
         deEss[1].coefficients = deEss[0].coefficients;
 
+        // --- articulation: lift consonants for a few ms so words stay readable ---
+        {
+            const float want = (broadEnvDb > -55.0f) ? juce::jlimit (0.0f, p.articDb * amount, (articPeak - 1.3f) * 2.5f) : 0.0f;
+            articDb += (want - articDb) * (want > articDb ? 1.0f : coef (45.0f, blockMs));
+            articPeak = 0.0f;
+            *artic[0].coefficients = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 4500.0f, 0.8f, juce::Decibels::decibelsToGain (articDb));
+            artic[1].coefficients = artic[0].coefficients;
+        }
+
         // --- run the chain -------------------------------------------------
         const float drive  = 1.0f + p.drive * amount * 6.0f;          // 1 .. 7
         const float makeup = 1.0f / std::tanh (drive * 0.7f) * 0.7f;   // keep loudness roughly even
@@ -184,6 +206,7 @@ public:
                 x = lowMid[ch].processSample (x);
                 if (useBox) x = box[ch].processSample (x);
                 x = presence[ch].processSample (x);
+                x = artic[ch].processSample (x);
                 x = hiShelf[ch].processSample (x);
                 x = deEss[ch].processSample (x);
 
@@ -197,6 +220,7 @@ public:
     }
 
     float getDeEssDb() const { return deEssDb; }
+    float getArticDb() const { return articDb; }
     int   getMode()   const { return modeIndex; }
 
 private:
@@ -230,6 +254,7 @@ private:
     bool dirty = true;
 
     juce::dsp::IIR::Filter<float> hpf[2], lowShelf[2], lowMid[2], box[2], presence[2], hiShelf[2], deEss[2];
-    juce::dsp::IIR::Filter<float> deEssDetect;
+    juce::dsp::IIR::Filter<float> deEssDetect, articDetect, artic[2];
+    float articFast = 0.0f, articSlow = 0.0f, articPeak = 0.0f, articDb = 0.0f, articCf = 0.05f, articCs = 0.0005f;
     float sibEnvDb = -100.0f, broadEnvDb = -100.0f, deEssDb = 0.0f;
 };

@@ -12,7 +12,7 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
     layout.add (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { ProProcessor::kMode, 1 }, "Mode",
-        juce::StringArray { "Crisp", "Clear", "Soft" }, 1));
+        juce::StringArray { "Crisp", "Clear", "Soft", "Room" }, 1));
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ProProcessor::kAmount, 1 }, "Mode Amount",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
@@ -23,8 +23,9 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
 
 ProProcessor::ProProcessor()
     : AudioProcessor (BusesProperties()
-                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
+                        .withInput  ("Input",     juce::AudioChannelSet::stereo(), true)
+                        .withOutput ("Output",    juce::AudioChannelSet::stereo(), true)
+                        .withInput  ("Sidechain", juce::AudioChannelSet::stereo(), false)),   // Room mode: the vocal
       apvts (*this, nullptr, "ScrubPro", makeLayout())
 {
     cleanupParam = apvts.getRawParameterValue (kCleanup);
@@ -37,14 +38,17 @@ bool ProProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     const auto& out = layouts.getMainOutputChannelSet();
     if (out != juce::AudioChannelSet::mono() && out != juce::AudioChannelSet::stereo()) return false;
-    return layouts.getMainInputChannelSet() == out;
+    if (layouts.getMainInputChannelSet() != out) return false;
+    const auto& sc = layouts.getChannelSet (true, 1);
+    return sc.isDisabled() || sc == juce::AudioChannelSet::mono() || sc == juce::AudioChannelSet::stereo();
 }
 
 void ProProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    const int ch = getTotalNumOutputChannels();
+    const int ch = getMainBusNumOutputChannels();
     engine.prepare (sampleRate, samplesPerBlock, ch);
     chain.prepare (sampleRate, samplesPerBlock, ch);
+    room.prepare (sampleRate, ch);
     engine.setAmount (cleanupParam->load());
     chain.setMode ((int) modeParam->load(), true);
     chain.setAmount (amountParam->load());
@@ -53,18 +57,28 @@ void ProProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 void ProProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
-    for (int ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch)
-        buffer.clear (ch, 0, buffer.getNumSamples());
+    auto main = getBusBuffer (buffer, true, 0);
+    const bool scOn = getBus (true, 1) != nullptr && getBus (true, 1)->isEnabled() && getBusBuffer (buffer, true, 1).getNumChannels() > 0;
+    juce::AudioBuffer<float> sc; if (scOn) sc = getBusBuffer (buffer, true, 1);
 
     if (activeParam->load() < 0.5f) return;
 
     engine.setAmount (cleanupParam->load());
-    engine.process (buffer);
+    engine.process (main);
 
-    chain.setMode ((int) modeParam->load());
+    const int mode = (int) modeParam->load();
     const float a = amountParam->load();
-    if (std::abs (a - lastAmount) > 0.0005f) { chain.setAmount (a); lastAmount = a; }
-    chain.process (buffer);
+    if (mode == roomModeIndex)
+    {
+        // on the beat: step aside for the vocal on the sidechain
+        room.process (main, scOn ? &sc : nullptr, a);
+    }
+    else
+    {
+        chain.setMode (mode);
+        if (std::abs (a - lastAmount) > 0.0005f) { chain.setAmount (a); lastAmount = a; }
+        chain.process (main);
+    }
 }
 
 juce::AudioProcessorEditor* ProProcessor::createEditor() { return new ProEditor (*this); }

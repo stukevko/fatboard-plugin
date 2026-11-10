@@ -60,6 +60,7 @@ public:
 
         // Gate: below this input level we do nothing (avoid pumping on silence)
         float gateDb = -60.0f;
+        float knobScale = 0.65f;          // TUNE – what "100 %" means
     };
 
     Settings settings;
@@ -164,7 +165,8 @@ public:
         // The envelope is a wide (±6 band) median-ish average with the band itself and its
         // direct neighbours excluded, so a broad boom still "sticks out" while the natural
         // slope of a voice does not.
-        const float amount = amountSmoothed.getNextValue();
+        // knob scaling: people turn it all the way up – full must still sound like a voice (v0.3 full ≈ 154 %)
+        const float amount = amountSmoothed.getNextValue() * settings.knobScale;
         amountSmoothed.skip (numSamples - 1);
 
         for (int i = 0; i < numBands; ++i)

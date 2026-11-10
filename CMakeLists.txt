@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.3.2 LANGUAGES C CXX)
+project(Fatboard VERSION 0.4.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,7 +46,8 @@ set(FATBOARD_COMMON_SOURCES
   Source/Common/FatboardLookAndFeel.h
   Source/Common/FatboardWidgets.h
   Source/Common/CleanupEngine.h
-  Source/Common/VocalModes.h)
+  Source/Common/VocalModes.h
+  Source/Common/RoomCarver.h)
 
 set(FATBOARD_FORMATS VST3 Standalone)
 if(APPLE)
@@ -243,6 +244,12 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(SmashTest PRIVATE Source/Common Source/Smash)
   target_compile_definitions(SmashTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(SmashTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(RoomTest PRODUCT_NAME "RoomTest")
+  target_sources(RoomTest PRIVATE Tests/RoomTest.cpp)
+  target_include_directories(RoomTest PRIVATE Source/Common)
+  target_compile_definitions(RoomTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(RoomTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(DafocusStress PRODUCT_NAME "DafocusStress")
   target_sources(DafocusStress PRIVATE Tests/DafocusStress.cpp)

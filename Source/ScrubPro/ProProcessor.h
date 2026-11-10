@@ -2,6 +2,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "CleanupEngine.h"
 #include "VocalModes.h"
+#include "RoomCarver.h"
 
 class ProProcessor : public juce::AudioProcessor
 {
@@ -35,6 +36,8 @@ public:
     juce::AudioProcessorValueTreeState apvts;
     const CleanupEngine& getEngine() const { return engine; }
     const VocalChain& getChain() const { return chain; }
+    const RoomCarver& getRoom() const { return room; }
+    static constexpr int roomModeIndex = 3;
 
     static constexpr const char* kCleanup = "cleanup";
     static constexpr const char* kMode    = "mode";
@@ -44,6 +47,7 @@ public:
 private:
     CleanupEngine engine;
     VocalChain chain;
+    RoomCarver room;
     std::atomic<float>* cleanupParam = nullptr;
     std::atomic<float>* modeParam = nullptr;
     std::atomic<float>* amountParam = nullptr;
