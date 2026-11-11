@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.4.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.5.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -47,7 +47,8 @@ set(FATBOARD_COMMON_SOURCES
   Source/Common/FatboardWidgets.h
   Source/Common/CleanupEngine.h
   Source/Common/VocalModes.h
-  Source/Common/RoomCarver.h)
+  Source/Common/RoomCarver.h
+  Source/Common/AutoBalance.h)
 
 set(FATBOARD_FORMATS VST3 Standalone)
 if(APPLE)
@@ -250,6 +251,12 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(RoomTest PRIVATE Source/Common)
   target_compile_definitions(RoomTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(RoomTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(BalanceTest PRODUCT_NAME "BalanceTest")
+  target_sources(BalanceTest PRIVATE Tests/BalanceTest.cpp)
+  target_include_directories(BalanceTest PRIVATE Source/Common)
+  target_compile_definitions(BalanceTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(BalanceTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(DafocusStress PRODUCT_NAME "DafocusStress")
   target_sources(DafocusStress PRIVATE Tests/DafocusStress.cpp)

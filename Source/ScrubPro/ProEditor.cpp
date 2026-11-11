@@ -4,8 +4,8 @@ using namespace FatboardColours;
 
 static const char* modeNames[4] = { "Crisp", "Clear", "Soft", "Room" };
 static const char* modeHints[4] = {
-    "Bites without the ice pick. For vocals that need to cut through a loud beat.",
-    "Takes the blanket off. The voice sits in front of the beat.",
+    "Bites without the ice pick. Balances and levels the voice so it cuts through a loud beat.",
+    "Takes the blanket off. Balances and levels the voice so it sits in front of the beat.",
     "Rounds the edges, keeps the body. For R&B and anything close.",
     "Put me on the BEAT, send the vocal to my sidechain. The beat steps aside while you rap."
 };
@@ -67,7 +67,7 @@ void ProEditor::refreshModeButtons()
 void ProEditor::timerCallback()
 {
     const bool roomMode = (int) proc.apvts.getRawParameterValue (ProProcessor::kMode)->load() == ProProcessor::roomModeIndex;
-    const float total = proc.getEngine().getTotalActivity() + (roomMode ? proc.getRoom().getTotalCutDb() * 1.5f : proc.getChain().getDeEssDb());
+    const float total = proc.getEngine().getTotalActivity() + (roomMode ? proc.getRoom().getTotalCutDb() * 1.5f : proc.getChain().getDeEssDb() + proc.getBalance().getLevelDb());
     activity.setActivity (juce::jlimit (0.0f, 1.0f, total / 18.0f));
     const bool l = roomMode && proc.getRoom().isLinked(), v = roomMode && proc.getRoom().vocalPresent();
     if (l != roomLinked || v != roomVocal) { roomLinked = l; roomVocal = v; repaint(); }
@@ -105,7 +105,7 @@ void ProEditor::paint (juce::Graphics& g)
 
     g.setColour (grey);
     g.setFont (FatboardLookAndFeel::body (12.5f));
-    juce::String hint = "Cleanup runs first. Then the mode. Double-click resets.";
+    juce::String hint = "Cleanup first. Then auto balance, mode and leveler. Double-click resets.";
     if (current == ProProcessor::roomModeIndex)
         hint = roomLinked ? (roomVocal ? "Vocal linked: making room." : "Vocal linked: waiting for the next line.")
                           : "No vocal on the sidechain yet. Room does nothing until you link it.";

@@ -49,6 +49,7 @@ void ProProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     engine.prepare (sampleRate, samplesPerBlock, ch);
     chain.prepare (sampleRate, samplesPerBlock, ch);
     room.prepare (sampleRate, ch);
+    balance.prepare (sampleRate, ch);
     engine.setAmount (cleanupParam->load());
     chain.setMode ((int) modeParam->load(), true);
     chain.setAmount (amountParam->load());
@@ -77,7 +78,11 @@ void ProProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuf
     {
         chain.setMode (mode);
         if (std::abs (a - lastAmount) > 0.0005f) { chain.setAmount (a); lastAmount = a; }
+        // v0.5: tone towards the mode's target curve → mode chain → leveler + peak catcher
+        balance.setMode (mode);
+        balance.processTone (main, a);
         chain.process (main);
+        balance.processLevel (main, a);
     }
 }
 
