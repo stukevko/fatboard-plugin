@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
-    paths-ignore: [ '**.md', 'installers/mac/**', 'docs/**' ]
+    paths-ignore: [ '**.md', 'docs/**' ]
   workflow_dispatch:
     inputs:
       mac:
@@ -98,6 +98,11 @@ jobs:
             cp -R build/${t}_artefacts/Release/AU/* out/
             cp -R build/${t}_artefacts/Release/Standalone/* out/
           done
+          # ad-hoc signature on every bundle (no Apple account needed; Apple Silicon wants one)
+          for b in out/*.vst3 out/*.component out/*.app; do codesign --force --deep --sign - "$b"; done
+          # the installer travels inside the zip: unzip, then `sh install.sh`
+          cp installers/mac/install.sh out/install.sh
+          printf '%s\n' "Fatboard for Mac" "" "1. Open the Terminal app." "2. Type:  sh   (then a space)" "3. Drag the file install.sh from this folder into the Terminal window." "4. Press Enter. Restart your DAW." > out/READ-ME.txt
           # per-plugin zips for `FATBOARD_ONLY=…` + one bundle
           (cd out && zip -qr ../Fatboard-scrub-mac.zip "Scrub.vst3" "Scrub.component")
           (cd out && zip -qr ../Fatboard-scrub-pro-mac.zip "Scrub Pro.vst3" "Scrub Pro.component")
