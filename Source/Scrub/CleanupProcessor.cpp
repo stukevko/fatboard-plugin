@@ -35,6 +35,7 @@ void CleanupProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     engine.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
     engine.setAmount (amountParam->load());
+    curve.prepare (sampleRate, getTotalNumOutputChannels());
 }
 
 void CleanupProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -45,8 +46,13 @@ void CleanupProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
 
     if (activeParam->load() < 0.5f) return;
 
-    engine.setAmount (amountParam->load());
+    // v0.6: the voice curve (Kevin's standard EQ) is the base, the automatic cleanup works inside it
+    const float knob = amountParam->load();
+    curve.setAmount (FatboardCurve::fromKnob (knob), buffer.getNumSamples());
+    curve.processPre (buffer);
+    engine.setAmount (knob);
     engine.process (buffer);
+    curve.processLowPass (buffer);
 }
 
 juce::AudioProcessorEditor* CleanupProcessor::createEditor() { return new CleanupEditor (*this); }

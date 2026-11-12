@@ -9,7 +9,7 @@ Zwei Plugins, ein Projekt, ein Look.
 | **Dafocus** | Vocal-Raum: Hall (8-Linien-FDN) + Tempo-Delay auf einem gefilterten, de-essten Send, beides wird von der Stimme **geduckt** und blüht in Pausen auf. Space Tight/Room/Far, Echo Off/1/8/1/4/1/8-dot, Knöpfe **Amount**, **Duck**. BPM vom Host. | tbd | 2 Pills, 2 Knöpfe |
 | **Spit** | Beatbox → Drum-MIDI. Erkennt Onsets (Spectral Flux + Energiesprung) und klassifiziert Kick/Snare/Hat; pro Pad per „learn" (3× vormachen) auf deine Laute kalibrierbar. Live-MIDI-Out (C1/D1/F#1) und **Take**: Record → Beatboxen → MIDI-Chip in die DAW ziehen, quantisiert mit **Tight** aufs **Grid**. Knöpfe **Sens**, **Tight**. Latenz ~43 ms (PDC). | tbd | 3 Pads, 2 Knöpfe |
 | **Smash** | Drum-Bus (ohne 808!): HPF 35 Hz → pegelbewusster Transient-Shaper → dynamischer Low-Mid-Cut (200–500) → Glue-Kompressor mit Auto-Schwelle → Hi-Tamer (6–9 k, dynamisch) → Tape-Sättigung → **Fit** (3-Band dyn. EQ, der die Drums dort zurücknimmt, wo das Sample auf dem Sidechain laut ist) → **Auto-Gain, pegelneutral**. Style Tight/Punch/Dirty, Knöpfe **Smash**, **Fit**. Null Latenz. | tbd | 1 Pill, 2 Knöpfe |
-| **Scrub Pro** | Cleanup + drei Vocal-Ketten **Crisp / Clear / Soft** (HPF, Tone-EQ, De-Esser, Sättigung) | 20 $ | zwei Knöpfe: **Cleanup**, **Mode** + drei Pills |
+| **Scrub Pro** | Scrub + **Air** (öffnet die Stimme, mit Zischlaut-Wächter) + **Room** (auf den Beat, Vocal auf den Sidechain) | 20 $ | großer **Scrub**-Knopf, **Air**-Knopf, **Room**-Schalter |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
 Farben: Scrub/Scrub Pro Gelb, Harun Orange ("Ember"), Dafocus Cyan ("Ice"), Spit Lime, Smash Magenta – eine Familie, auf einen Blick unterscheidbar.
@@ -89,12 +89,12 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
   Pro Style: Transient-Betonung (dB), Ziel-GR, Attack/Release, Sättigung, Hi-Tamer- und Mud-Deckel. Fit-Bänder 250/1200/4000 Hz, max. 5 dB. Auto-Gain hält die Lautheit (±0,5 dB), damit nichts durch „lauter" gewinnt. Offline-Test: `SmashTest`.
   **In FL Studio:** Smash auf den Drum-Bus (Kick, Snare, Hats, Percs – **nicht** die 808). Sample-Track → Send auf den Drum-Bus mit „Sidechain to this track" → im Plugin „sample linked".
 
-- **`Source/Common/AutoBalance.h` → `FatboardBalance`** (Scrub Pro, Zielkurven je Modus, Grenzen, Leveler, Peak-Catcher)
+- **`Source/Common/VoiceCurve.h` → `FatboardCurve`** (Scrub + Scrub Pro: die feste Stimm-EQ-Kurve, Frequenzen/Gains/Q, `fullAt`)
+- **`Source/Common/AirEngine.h` → `FatboardAir`** (Scrub Pro: Air-Shelves und Wächter)
 - **`Source/Common/RoomCarver.h` → `Settings`** (Scrub Pro, Modus Room)
   Bänder 300–6500 Hz mit Gewichtung (Sprache 1–4 kHz am stärksten), `maxDb` 4 pro Band (~5–6 dB im Sprachbereich bei 100 %), Attack 12 ms, Release 160 ms.
   **In FL Studio:** zweite Scrub-Pro-Instanz auf den Beat-/Sample-Bus, Modus Room; Vocal-Track → Send auf diesen Bus → „Sidechain to this track". Mode-Knopf = wie viel Platz.
 
-- **`Source/Common/VocalModes.h` → `Crisp`, `Clear`, `Soft`**
   Pro Modus: HPF, Low-Shelf, Low-Mid-Cut, Box-Cut, Presence, High-Shelf, De-Esser (Frequenz, max. Cut, Schwelle), Sättigung (`drive`), Trim. Der Mode-Knopf skaliert alle dB-Werte und die Sättigung.
 
 Ein Offline-Test ohne DAW: `cmake -B build -DFATBOARD_BUILD_TESTS=ON`, dann Target `FatboardEngineTest` bauen und starten. Er druckt pro Band, was das Plugin an einem synthetischen Signal (Resonanz bei 180 Hz, dumpfe Höhen) macht.
@@ -125,7 +125,8 @@ Tests/EngineTest.cpp      Offline-Sanity-Test
 ```
 
 ## Changelog
-- **v0.5** – Scrub Pro: **Auto Balance + Leveler** in Crisp/Clear/Soft (`Source/Common/AutoBalance.h`). Auto Balance misst die Langzeit-Klangkurve der Stimme in vier breiten Bändern und zieht sie an die Zielkurve des Modus: zu viel 150–450 Hz runter, fehlende Präsenz und Air rauf, so viel wie die Aufnahme braucht (Grenzen: Low-Mid −6…+1,5 dB, Präsenz/Air −3…+6 dB). Der Leveler gleicht laute und leise Wörter an (Schwelle folgt dem eigenen Durchschnittspegel der Stimme, automatisches Makeup), dahinter ein Peak-Catcher. „Clean"-Regeln: nur Feed-Forward, nur breite Filter, Klang bewegt sich über Sekunden, Messung friert in Pausen ein, 1 dB Totzone, Amount 0 = bit-identisch. Der Mode-Knopf steuert alles mit, volle Korrektur ab ~60 %. Kein neuer Regler. Test: `BalanceTest`.
+- **v0.6** – Umbau nach Kevins Vorgabe. **Scrub** bekommt als feste Basis seine Standard-Vocal-EQ-Kurve (aus dem FL-Preset „Parametric EQ 2" ausgelesen): High Pass 131 Hz, −1,8 dB @ 192 Hz, −1,7 @ 313, −1,6 @ 634, −2,0 @ 1,35 kHz (schmal), −3,4 @ 3,13 kHz (sehr schmal), Low Pass 10 kHz. Der Knopf dreht Kurve und automatisches Cleanup zusammen rein, die volle Kurve steht ab 60 %, bei 0 % bit-identisch (`VoiceCurve.h`). **Scrub Pro** = dasselbe + **Air**-Regler (Mid-/High-Air-Shelf, ein Wächter nimmt die Anhebung bei S/T-Lauten für Millisekunden weg, `AirEngine.h`) + **Room** als Schalter (großer Knopf wird dann zur Room-Stärke, Stimmkurve/Cleanup/Air sind auf dem Beat aus). Raus: Modi Crisp/Clear/Soft, Auto Balance, Leveler. Scrub Pro komprimiert nicht mehr. Fenster 640×600, großer Scrub-Knopf. Tests: `CurveTest`, `RoomTest`.
+- **v0.5** – (in v0.6 wieder entfernt) Scrub Pro: **Auto Balance + Leveler** in Crisp/Clear/Soft (`Source/Common/AutoBalance.h`). Auto Balance misst die Langzeit-Klangkurve der Stimme in vier breiten Bändern und zieht sie an die Zielkurve des Modus: zu viel 150–450 Hz runter, fehlende Präsenz und Air rauf, so viel wie die Aufnahme braucht (Grenzen: Low-Mid −6…+1,5 dB, Präsenz/Air −3…+6 dB). Der Leveler gleicht laute und leise Wörter an (Schwelle folgt dem eigenen Durchschnittspegel der Stimme, automatisches Makeup), dahinter ein Peak-Catcher. „Clean"-Regeln: nur Feed-Forward, nur breite Filter, Klang bewegt sich über Sekunden, Messung friert in Pausen ein, 1 dB Totzone, Amount 0 = bit-identisch. Der Mode-Knopf steuert alles mit, volle Korrektur ab ~60 %. Kein neuer Regler. Test: `BalanceTest`.
 - **v0.4** – Scrub Pro: neuer Modus **Room** (Plugin auf den BEAT, Vocal auf den Sidechain: der Beat weicht in 6 Bändern nur dort und nur dann aus, wo die Stimme gerade ist; ohne Sidechain bit-transparent). Clear/Crisp heben Konsonanten dynamisch an (Verständlichkeit, `articDb`). Scrub-Knopf neu skaliert (`knobScale` 0,65): 100 % klingt jetzt wie früher ~65 %, „volle Pulle" bleibt natürlich. Test: `RoomTest`.
 - **v0.3.2** – Neu: **Smash** (Drum-Bus mit Sample-Fit).
 - **v0.3.1** – Neu: **Spit** (Beatbox → Drum-MIDI).

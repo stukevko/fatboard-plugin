@@ -8,14 +8,13 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
         [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; });
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        juce::ParameterID { ProProcessor::kCleanup, 1 }, "Cleanup",
+        juce::ParameterID { ProProcessor::kCleanup, 1 }, "Scrub",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
-    layout.add (std::make_unique<juce::AudioParameterChoice> (
-        juce::ParameterID { ProProcessor::kMode, 1 }, "Mode",
-        juce::StringArray { "Crisp", "Clear", "Soft", "Room" }, 1));
     layout.add (std::make_unique<juce::AudioParameterFloat> (
-        juce::ParameterID { ProProcessor::kAmount, 1 }, "Mode Amount",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
+        juce::ParameterID { ProProcessor::kAir, 1 }, "Air",
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.35f, pct));
+    layout.add (std::make_unique<juce::AudioParameterBool> (
+        juce::ParameterID { ProProcessor::kRoom, 1 }, "Room", false));
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { ProProcessor::kActive, 1 }, "In", true));
     return layout;
@@ -29,8 +28,8 @@ ProProcessor::ProProcessor()
       apvts (*this, nullptr, "ScrubPro", makeLayout())
 {
     cleanupParam = apvts.getRawParameterValue (kCleanup);
-    modeParam    = apvts.getRawParameterValue (kMode);
-    amountParam  = apvts.getRawParameterValue (kAmount);
+    airParam     = apvts.getRawParameterValue (kAir);
+    roomParam    = apvts.getRawParameterValue (kRoom);
     activeParam  = apvts.getRawParameterValue (kActive);
 }
 
@@ -47,12 +46,10 @@ void ProProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     const int ch = getMainBusNumOutputChannels();
     engine.prepare (sampleRate, samplesPerBlock, ch);
-    chain.prepare (sampleRate, samplesPerBlock, ch);
+    curve.prepare (sampleRate, ch);
+    air.prepare (sampleRate, ch);
     room.prepare (sampleRate, ch);
-    balance.prepare (sampleRate, ch);
     engine.setAmount (cleanupParam->load());
-    chain.setMode ((int) modeParam->load(), true);
-    chain.setAmount (amountParam->load());
 }
 
 void ProProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -64,26 +61,24 @@ void ProProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuf
 
     if (activeParam->load() < 0.5f) return;
 
-    engine.setAmount (cleanupParam->load());
-    engine.process (main);
+    const float knob = cleanupParam->load();
+    if (roomParam->load() > 0.5f)
+    {
+        // ROOM: the plugin sits on the BEAT. No voice curve, no cleanup, no air: the beat only
+        // steps aside for the vocal on the sidechain. The big knob is how much room it makes.
+        room.process (main, scOn ? &sc : nullptr, knob);
+        wasRoom = true;
+        return;
+    }
+    if (wasRoom) { curve.reset(); air.reset(); engine.reset(); wasRoom = false; }
 
-    const int mode = (int) modeParam->load();
-    const float a = amountParam->load();
-    if (mode == roomModeIndex)
-    {
-        // on the beat: step aside for the vocal on the sidechain
-        room.process (main, scOn ? &sc : nullptr, a);
-    }
-    else
-    {
-        chain.setMode (mode);
-        if (std::abs (a - lastAmount) > 0.0005f) { chain.setAmount (a); lastAmount = a; }
-        // v0.5: tone towards the mode's target curve → mode chain → leveler + peak catcher
-        balance.setMode (mode);
-        balance.processTone (main, a);
-        chain.process (main);
-        balance.processLevel (main, a);
-    }
+    // VOICE: curve (high-pass + cuts) → automatic cleanup → air → curve low-pass
+    curve.setAmount (FatboardCurve::fromKnob (knob), main.getNumSamples());
+    curve.processPre (main);
+    engine.setAmount (knob);
+    engine.process (main);
+    air.process (main, airParam->load());
+    curve.processLowPass (main);
 }
 
 juce::AudioProcessorEditor* ProProcessor::createEditor() { return new ProEditor (*this); }

@@ -1,9 +1,9 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "CleanupEngine.h"
-#include "VocalModes.h"
+#include "VoiceCurve.h"
+#include "AirEngine.h"
 #include "RoomCarver.h"
-#include "AutoBalance.h"
 
 class ProProcessor : public juce::AudioProcessor
 {
@@ -36,26 +36,24 @@ public:
 
     juce::AudioProcessorValueTreeState apvts;
     const CleanupEngine& getEngine() const { return engine; }
-    const VocalChain& getChain() const { return chain; }
+    const AirEngine& getAir() const { return air; }
     const RoomCarver& getRoom() const { return room; }
-    const AutoBalance& getBalance() const { return balance; }
-    static constexpr int roomModeIndex = 3;
 
     static constexpr const char* kCleanup = "cleanup";
-    static constexpr const char* kMode    = "mode";
-    static constexpr const char* kAmount  = "modeAmount";
+    static constexpr const char* kAir     = "air";
+    static constexpr const char* kRoom    = "room";
     static constexpr const char* kActive  = "active";
 
 private:
     CleanupEngine engine;
-    VocalChain chain;
+    VoiceCurve curve;
+    AirEngine air;
     RoomCarver room;
-    AutoBalance balance;
     std::atomic<float>* cleanupParam = nullptr;
-    std::atomic<float>* modeParam = nullptr;
-    std::atomic<float>* amountParam = nullptr;
+    std::atomic<float>* airParam = nullptr;
+    std::atomic<float>* roomParam = nullptr;
     std::atomic<float>* activeParam = nullptr;
-    float lastAmount = -1.0f;
+    bool wasRoom = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProProcessor)
 };

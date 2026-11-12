@@ -1,6 +1,7 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "CleanupEngine.h"
+#include "VoiceCurve.h"
 
 class CleanupProcessor : public juce::AudioProcessor
 {
@@ -39,6 +40,7 @@ public:
 
 private:
     CleanupEngine engine;
+    VoiceCurve curve;
     std::atomic<float>* amountParam = nullptr;
     std::atomic<float>* activeParam = nullptr;
 

@@ -15,24 +15,22 @@ public:
 
 private:
     void timerCallback() override;
-    void modeClicked (int index);
-    void refreshModeButtons();
+    void refreshRoom();
 
     ProProcessor& proc;
     FatboardLookAndFeel lnf;
 
     FatboardHeader header { "Scrub Pro" };
-    BigKnob cleanupKnob { "Cleanup" };
-    BigKnob modeKnob { "Mode" };
-    juce::TextButton modeButtons[4];
+    BigKnob scrubKnob { "Scrub" };
+    BigKnob airKnob { "Air" };
+    juce::TextButton roomButton { "Room" };
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> cleanupAtt, modeAmountAtt;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt;
-    juce::ParameterAttachment modeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> scrubAtt, airAtt;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt, roomAtt;
 
-    bool roomLinked = false, roomVocal = false;
+    bool roomOn = false, roomLinked = false, roomVocal = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProEditor)
 };

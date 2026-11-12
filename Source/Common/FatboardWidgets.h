@@ -68,6 +68,8 @@ public:
 
     juce::Slider slider;
 
+    void setLabel (const juce::String& text) { if (text != label) { label = text; repaint(); } }
+
     void resized() override
     {
         auto r = getLocalBounds();

@@ -3,7 +3,6 @@
 // prints what the engine does. No audio hardware needed.
 #include <juce_dsp/juce_dsp.h>
 #include "CleanupEngine.h"
-#include "VocalModes.h"
 #include <cstdio>
 
 static float bandDb (const juce::AudioBuffer<float>& b, double sr, float hz, float q)
@@ -72,13 +71,5 @@ int main()
                      [&] { float m = 0; int idx = 0; for (int i = 0; i < CleanupEngine::numBands; ++i) if (e.getBandReductionDb (i) > m) { m = e.getBandReductionDb (i); idx = i; } return e.getBandHz (idx); }());
     }
 
-    for (int mode = 0; mode < 3; ++mode)
-    {
-        CleanupEngine e; e.prepare (sr, block, 2); e.setAmount (0.5f);
-        VocalChain c; c.prepare (sr, block, 2); c.setMode (mode, true); c.setAmount (0.5f);
-        char name[64]; std::snprintf (name, sizeof (name), "Pro mode %s (0.5 / 0.5)", FatboardModes::get (mode).name);
-        run (name, [&] (juce::AudioBuffer<float>& b) { e.process (b); c.process (b); });
-        std::printf ("  de-ess %.2f dB\n", c.getDeEssDb());
-    }
     return 0;
 }

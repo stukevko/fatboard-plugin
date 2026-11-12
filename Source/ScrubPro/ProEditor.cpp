@@ -2,41 +2,28 @@
 
 using namespace FatboardColours;
 
-static const char* modeNames[4] = { "Crisp", "Clear", "Soft", "Room" };
-static const char* modeHints[4] = {
-    "Bites without the ice pick. Balances and levels the voice so it cuts through a loud beat.",
-    "Takes the blanket off. Balances and levels the voice so it sits in front of the beat.",
-    "Rounds the edges, keeps the body. For R&B and anything close.",
-    "Put me on the BEAT, send the vocal to my sidechain. The beat steps aside while you rap."
-};
-
 ProEditor::ProEditor (ProProcessor& p)
-    : AudioProcessorEditor (&p), proc (p),
-      modeAttachment (*proc.apvts.getParameter (ProProcessor::kMode),
-                      [this] (float) { refreshModeButtons(); }, nullptr)
+    : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
     addAndMakeVisible (header);
-    addAndMakeVisible (cleanupKnob);
-    addAndMakeVisible (modeKnob);
+    addAndMakeVisible (scrubKnob);
+    addAndMakeVisible (airKnob);
+    addAndMakeVisible (roomButton);
     addAndMakeVisible (activity);
     addAndMakeVisible (footer);
 
-    for (int i = 0; i < 4; ++i)
-    {
-        modeButtons[i].setButtonText (modeNames[i]);
-        modeButtons[i].setClickingTogglesState (false);
-        modeButtons[i].setRadioGroupId (0);
-        modeButtons[i].onClick = [this, i] { modeClicked (i); };
-        addAndMakeVisible (modeButtons[i]);
-    }
+    roomButton.setClickingTogglesState (true);
+    roomButton.setTooltip ("Put Scrub Pro on the BEAT and send the vocal to its sidechain. The beat steps aside while you rap.");
+    airKnob.slider.setDoubleClickReturnValue (true, 0.35);
 
-    cleanupAtt    = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, ProProcessor::kCleanup, cleanupKnob.slider);
-    modeAmountAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, ProProcessor::kAmount, modeKnob.slider);
-    activeAtt     = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, ProProcessor::kActive, header.power);
+    scrubAtt  = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, ProProcessor::kCleanup, scrubKnob.slider);
+    airAtt    = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, ProProcessor::kAir, airKnob.slider);
+    activeAtt = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, ProProcessor::kActive, header.power);
+    roomAtt   = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, ProProcessor::kRoom, roomButton);
 
-    modeAttachment.sendInitialUpdate();
-    setSize (640, 540);
+    setSize (640, 600);
+    refreshRoom();
     startTimerHz (30);
 }
 
@@ -45,31 +32,25 @@ ProEditor::~ProEditor()
     setLookAndFeel (nullptr);
 }
 
-void ProEditor::modeClicked (int index)
+void ProEditor::refreshRoom()
 {
-    if (auto* param = proc.apvts.getParameter (ProProcessor::kMode))
-    {
-        const float norm = param->convertTo0to1 ((float) index);
-        modeAttachment.setValueAsCompleteGesture (param->convertFrom0to1 (norm));
-    }
-}
-
-void ProEditor::refreshModeButtons()
-{
-    int current = 1;
-    if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (proc.apvts.getParameter (ProProcessor::kMode)))
-        current = param->getIndex();
-    for (int i = 0; i < 4; ++i)
-        modeButtons[i].setToggleState (i == current, juce::dontSendNotification);
+    roomOn = proc.apvts.getRawParameterValue (ProProcessor::kRoom)->load() > 0.5f;
+    scrubKnob.setLabel (roomOn ? "Room" : "Scrub");
+    airKnob.setEnabled (! roomOn);
+    airKnob.setAlpha (roomOn ? 0.3f : 1.0f);
     repaint();
 }
 
 void ProEditor::timerCallback()
 {
-    const bool roomMode = (int) proc.apvts.getRawParameterValue (ProProcessor::kMode)->load() == ProProcessor::roomModeIndex;
-    const float total = proc.getEngine().getTotalActivity() + (roomMode ? proc.getRoom().getTotalCutDb() * 1.5f : proc.getChain().getDeEssDb() + proc.getBalance().getLevelDb());
+    const bool r = proc.apvts.getRawParameterValue (ProProcessor::kRoom)->load() > 0.5f;
+    if (r != roomOn) refreshRoom();
+
+    const float total = roomOn ? proc.getRoom().getTotalCutDb() * 1.5f
+                               : proc.getEngine().getTotalActivity() + proc.getAir().getGuardDb();
     activity.setActivity (juce::jlimit (0.0f, 1.0f, total / 18.0f));
-    const bool l = roomMode && proc.getRoom().isLinked(), v = roomMode && proc.getRoom().vocalPresent();
+
+    const bool l = roomOn && proc.getRoom().isLinked(), v = roomOn && proc.getRoom().vocalPresent();
     if (l != roomLinked || v != roomVocal) { roomLinked = l; roomVocal = v; repaint(); }
 }
 
@@ -90,23 +71,14 @@ void ProEditor::paint (juce::Graphics& g)
     g.setColour (lnf.accent);
     g.drawText ("FAT OUT.", left, juce::Justification::centredLeft, false);
 
-    // current mode hint, right of the claim
-    int current = 1;
-    if (auto* param = dynamic_cast<juce::AudioParameterChoice*> (proc.apvts.getParameter (ProProcessor::kMode)))
-        current = param->getIndex();
     g.setColour (grey);
     g.setFont (FatboardLookAndFeel::body (12.5f));
-    g.drawFittedText (modeHints[current], claim.reduced (0, 8), juce::Justification::centredLeft, 3);
+    g.drawFittedText (roomOn ? "I'm on the BEAT now. Send the vocal to my sidechain and the beat steps aside while you rap."
+                             : "Scrub cleans the voice up. Air opens it. That's the whole vocal chain.",
+                      claim.reduced (0, 8), juce::Justification::centredLeft, 3);
 
-    // divider between the two knobs
-    auto knobs = r.withTrimmedTop (56).withTrimmedBottom (44 + 24);
-    g.setColour (line);
-    g.fillRect (juce::Rectangle<int> (1, knobs.getHeight() - 20).withCentre (knobs.getCentre()));
-
-    g.setColour (grey);
-    g.setFont (FatboardLookAndFeel::body (12.5f));
-    juce::String hint = "Cleanup first. Then auto balance, mode and leveler. Double-click resets.";
-    if (current == ProProcessor::roomModeIndex)
+    juce::String hint = "Turn until it sounds right. Double-click resets.";
+    if (roomOn)
         hint = roomLinked ? (roomVocal ? "Vocal linked: making room." : "Vocal linked: waiting for the next line.")
                           : "No vocal on the sidechain yet. Room does nothing until you link it.";
     g.drawText (hint, r.removeFromBottom (24), juce::Justification::centred, false);
@@ -119,21 +91,18 @@ void ProEditor::resized()
     footer.setBounds (r.removeFromBottom (28));
     r.removeFromTop (74);          // claim
     r.removeFromBottom (24);       // hint
+    r.removeFromTop (8);
 
-    // mode pills
-    auto pills = r.removeFromTop (56).withSizeKeepingCentre (4 * 110 + 3 * 10, 40);
-    for (int i = 0; i < 4; ++i)
-    {
-        modeButtons[i].setBounds (pills.removeFromLeft (110));
-        pills.removeFromLeft (10);
-    }
+    // big Scrub knob on the left, Air + Room stacked on the right
+    auto rightCol = r.removeFromRight (190);
+    r.removeFromRight (16);
+    const int big = juce::jmin (r.getWidth(), r.getHeight());
+    scrubKnob.setBounds (r.withSizeKeepingCentre (big, big));
 
-    auto act = r.removeFromBottom (44);
-    activity.setBounds (act.withSizeKeepingCentre (36, 36));
-
-    auto leftArea  = r.removeFromLeft (r.getWidth() / 2);
-    auto rightArea = r;
-    const int size = juce::jmin (leftArea.getWidth(), leftArea.getHeight()) - 8;
-    cleanupKnob.setBounds (leftArea.withSizeKeepingCentre (size, size));
-    modeKnob.setBounds (rightArea.withSizeKeepingCentre (size, size));
+    auto stack = rightCol.withSizeKeepingCentre (190, 170 + 18 + 40 + 22 + 36);
+    airKnob.setBounds (stack.removeFromTop (170).withSizeKeepingCentre (170, 170));
+    stack.removeFromTop (18);
+    roomButton.setBounds (stack.removeFromTop (40).withSizeKeepingCentre (130, 40));
+    stack.removeFromTop (22);
+    activity.setBounds (stack.removeFromTop (36).withSizeKeepingCentre (36, 36));
 }
