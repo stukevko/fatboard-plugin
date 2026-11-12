@@ -2,38 +2,77 @@
 
 using namespace FatboardColours;
 
+static const char* templateHints[HarunTemplates::count] = {
+    "Tight double right under the lead. Thickens the voice without sounding like two people.",
+    "The double pushed all the way out to the sides. For hooks.",
+    "Harmony or second voice: thinner at the bottom, sits behind the lead with a room around it.",
+    "Far back, dark, with hall and echo. For stacks, choirs and ad-libs in the distance."
+};
+
 HarunEditor::HarunEditor (HarunProcessor& p)
     : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
     addAndMakeVisible (header);
-    addAndMakeVisible (amountKnob); addAndMakeVisible (widthKnob); addAndMakeVisible (tuckKnob);
+    addAndMakeVisible (curveView);
+    addAndMakeVisible (widthKnob); addAndMakeVisible (levelKnob); addAndMakeVisible (spaceKnob);
     addAndMakeVisible (activity);
     addAndMakeVisible (footer);
 
-    modeGroup = std::make_unique<PillGroup> (*proc.apvts.getParameter (HarunProcessor::kMode), "Mode");
-    addAndMakeVisible (*modeGroup);
+    for (int i = 0; i < HarunTemplates::count; ++i)
+    {
+        templateButtons[i].setButtonText (HarunTemplates::all[i].name);
+        templateButtons[i].setClickingTogglesState (false);
+        templateButtons[i].onClick = [this, i] { proc.loadTemplate (i); };     // also sets Width / Level / Space to what fits
+        addAndMakeVisible (templateButtons[i]);
+    }
 
-    amountAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, HarunProcessor::kAmount, amountKnob.slider);
-    widthAtt  = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, HarunProcessor::kWidth,  widthKnob.slider);
-    tuckAtt   = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (proc.apvts, HarunProcessor::kTuck,   tuckKnob.slider);
+    spaceType = std::make_unique<PillGroup> (*proc.apvts.getParameter (HarunProcessor::kSpaceType), "Space is");
+    addAndMakeVisible (*spaceType);
+
+    widthAtt  = std::make_unique<SliderAtt> (proc.apvts, HarunProcessor::kWidth, widthKnob.slider);
+    levelAtt  = std::make_unique<SliderAtt> (proc.apvts, HarunProcessor::kLevel, levelKnob.slider);
+    spaceAtt  = std::make_unique<SliderAtt> (proc.apvts, HarunProcessor::kSpace, spaceKnob.slider);
     activeAtt = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, HarunProcessor::kActive, header.power);
-    amountKnob.slider.setDoubleClickReturnValue (true, 1.0);
-    widthKnob.slider.setDoubleClickReturnValue (true, 0.8);
-    tuckKnob.slider.setDoubleClickReturnValue (true, 0.5);
+    for (auto* k : { &widthKnob, &levelKnob, &spaceKnob }) k->slider.onValueChange = [this] { refreshLabels(); };
 
-    setSize (640, 540);
+    setSize (640, 700);
     startTimerHz (20);
+    timerCallback();
+    refreshLabels();
 }
 
 HarunEditor::~HarunEditor() { setLookAndFeel (nullptr); }
 
+void HarunEditor::refreshLabels()
+{
+    auto text = [this] (const char* id) { auto* prm = proc.apvts.getParameter (id); return prm != nullptr ? prm->getCurrentValueAsText() : juce::String(); };
+    widthKnob.setLabel ("Width  " + text (HarunProcessor::kWidth));
+    levelKnob.setLabel ("Level  " + text (HarunProcessor::kLevel));
+    spaceKnob.setLabel ("Space  " + text (HarunProcessor::kSpace));
+}
+
 void HarunEditor::timerCallback()
 {
     const auto& e = proc.getEngine();
-    activity.setActivity (e.getActivity());
-    const bool sc = e.usingSidechain(); const float ride = e.getRideDb();
-    if (sc != scShown || std::abs (ride - rideShown) > 0.3f) { scShown = sc; rideShown = ride; repaint(); }
+    const bool on = proc.apvts.getRawParameterValue (HarunProcessor::kActive)->load() > 0.5f;
+    activity.setActivity (on ? juce::jmax (e.getActivity() * 0.6f, juce::jlimit (0.0f, 1.0f, e.getSpaceMeter() * 6.0f)) : 0.0f);
+
+    const int t = (int) proc.apvts.getRawParameterValue (HarunProcessor::kTemplate)->load();
+    if (t != shownTemplate)
+    {
+        shownTemplate = t;
+        for (int i = 0; i < HarunTemplates::count; ++i) templateButtons[i].setToggleState (i == t, juce::dontSendNotification);
+        // double-click on a knob = back to what the template set
+        const auto& tp = HarunTemplates::get (t);
+        widthKnob.slider.setDoubleClickReturnValue (true, tp.width);
+        levelKnob.slider.setDoubleClickReturnValue (true, tp.levelDb);
+        spaceKnob.slider.setDoubleClickReturnValue (true, tp.space);
+        repaint();
+    }
+    const auto& tp = HarunTemplates::get (t);
+    const float level = proc.apvts.getRawParameterValue (HarunProcessor::kLevel)->load();
+    curveView.update ([&] (float hz) { return on ? HarunTemplates::responseDb (tp, hz) + level * 0.35f : 0.0f; });   // level nudges the whole line a little
 }
 
 void HarunEditor::paint (juce::Graphics& g)
@@ -51,21 +90,11 @@ void HarunEditor::paint (juce::Graphics& g)
     g.setColour (lnf.accent);
     g.drawText ("WIDE OPEN.", left, juce::Justification::centredLeft, false);
 
-    // status: sidechain + ride
-    g.setColour (grey);
-    g.setFont (FatboardLookAndFeel::displayBold (10.0f));
-    g.drawText ("LEAD", claim.removeFromTop (14), juce::Justification::centredRight, false);
-    g.setFont (FatboardLookAndFeel::display (22.0f));
-    g.setColour (scShown ? lnf.accent : dim);
-    g.drawText (scShown ? "LINKED" : "NOT LINKED", claim.removeFromTop (28), juce::Justification::centredRight, false);
-    g.setColour (grey);
-    g.setFont (FatboardLookAndFeel::body (11.0f));
-    g.drawText (scShown ? juce::String ("riding ") + (rideShown >= 0 ? "+" : "") + juce::String (rideShown, 1) + " dB"
-                        : "send the lead to the sidechain", claim, juce::Justification::centredRight, false);
-
     g.setColour (grey);
     g.setFont (FatboardLookAndFeel::body (12.5f));
-    g.drawText ("Put Harun on your double or harmony track. It sits it left and right, under the lead, done.",
+    g.drawFittedText (templateHints[juce::jlimit (0, HarunTemplates::count - 1, shownTemplate)], claim.reduced (0, 8), juce::Justification::centredLeft, 3);
+
+    g.drawText ("On your double or harmony track. Pick a template, done. EQ is matched to Scrub.",
                 r.removeFromBottom (24), juce::Justification::centred, false);
 }
 
@@ -74,20 +103,27 @@ void HarunEditor::resized()
     auto r = getLocalBounds().reduced (28);
     header.setBounds (r.removeFromTop (56));
     footer.setBounds (r.removeFromBottom (28));
-    r.removeFromTop (74);
-    r.removeFromBottom (24);
+    r.removeFromTop (74);          // claim
+    r.removeFromBottom (24);       // hint
 
-    auto row = r.removeFromTop (62);
-    modeGroup->setBounds (row.removeFromLeft (220));
+    // templates
+    auto row = r.removeFromTop (44);
+    const int gap = 10, bw = (row.getWidth() - gap * (HarunTemplates::count - 1)) / HarunTemplates::count;
+    for (int i = 0; i < HarunTemplates::count; ++i) { templateButtons[i].setBounds (row.removeFromLeft (bw).withHeight (40)); row.removeFromLeft (gap); }
     r.removeFromTop (8);
 
-    auto act = r.removeFromBottom (44);
-    activity.setBounds (act.withSizeKeepingCentre (36, 36));
+    curveView.setBounds (r.removeFromTop (104));
+    r.removeFromTop (8);
+
+    // space type + activity at the bottom
+    auto bottom = r.removeFromBottom (60);
+    activity.setBounds (bottom.removeFromRight (60).withSizeKeepingCentre (34, 34));
+    spaceType->setBounds (bottom.removeFromRight (300));
 
     const int third = r.getWidth() / 3;
     auto a = r.removeFromLeft (third), b = r.removeFromLeft (third), c = r;
-    const int size = juce::jmin (third, r.getHeight()) - 12;
-    amountKnob.setBounds (a.withSizeKeepingCentre (size, size));
-    widthKnob.setBounds  (b.withSizeKeepingCentre (size, size));
-    tuckKnob.setBounds   (c.withSizeKeepingCentre (size, size));
+    const int size = juce::jmin (third, r.getHeight()) - 6;
+    widthKnob.setBounds (a.withSizeKeepingCentre (size, size));
+    levelKnob.setBounds (b.withSizeKeepingCentre (size, size));
+    spaceKnob.setBounds (c.withSizeKeepingCentre (size, size));
 }

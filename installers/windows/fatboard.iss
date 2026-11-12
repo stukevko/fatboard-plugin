@@ -56,7 +56,7 @@ Name: "custom"; Description: "Pick plugins"; Flags: iscustom
 [Components]
 Name: "scrub";    Description: "Scrub – one-knob cleanup (free)";     Types: full custom; Flags: fixed
 Name: "scrubpro"; Description: "Scrub Pro – cleanup + vocal modes";    Types: full custom
-Name: "harun";    Description: "Harun – harmony / doubler";            Types: full custom
+Name: "harun";    Description: "Harun – double / harmony templates (wide layer, matched EQ, hall + echo)";            Types: full custom
 Name: "spit";     Description: "Spit – beatbox to drum MIDI";               Types: full custom
 Name: "smash";    Description: "Smash – drum bus";                           Types: full custom
 Name: "standalone"; Description: "Standalone apps (test without a DAW)"; Types: full custom

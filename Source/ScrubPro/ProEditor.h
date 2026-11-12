@@ -15,7 +15,6 @@ public:
 
 private:
     void timerCallback() override;
-    void refreshRoom();
     void refreshFineLabels();
 
     ProProcessor& proc;
@@ -26,16 +25,13 @@ private:
     BigKnob scrubKnob { "Scrub" };
     BigKnob airKnob { "Air" };
     BigKnob fine[4] { BigKnob { "Low Cut" }, BigKnob { "Mud" }, BigKnob { "Harsh" }, BigKnob { "Top" } };
-    juce::TextButton roomButton { "Room" };
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 
     using SliderAtt = juce::AudioProcessorValueTreeState::SliderAttachment;
     using ButtonAtt = juce::AudioProcessorValueTreeState::ButtonAttachment;
     std::unique_ptr<SliderAtt> scrubAtt, airAtt, fineAtt[4];
-    std::unique_ptr<ButtonAtt> activeAtt, roomAtt;
-
-    bool roomOn = false, roomLinked = false, roomVocal = false;
+    std::unique_ptr<ButtonAtt> activeAtt;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProEditor)
 };

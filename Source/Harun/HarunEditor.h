@@ -15,22 +15,25 @@ public:
 
 private:
     void timerCallback() override;
+    void refreshLabels();
 
     HarunProcessor& proc;
     FatboardLookAndFeel lnf { FatboardColours::ember };
 
     FatboardHeader header { "Harun" };
-    std::unique_ptr<PillGroup> modeGroup;
-    BigKnob amountKnob { "Amount" };
+    juce::TextButton templateButtons[HarunTemplates::count];
+    CurveView curveView;
     BigKnob widthKnob { "Width" };
-    BigKnob tuckKnob { "Tuck" };
+    BigKnob levelKnob { "Level" };
+    BigKnob spaceKnob { "Space" };
+    std::unique_ptr<PillGroup> spaceType;
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> amountAtt, widthAtt, tuckAtt;
+    using SliderAtt = juce::AudioProcessorValueTreeState::SliderAttachment;
+    std::unique_ptr<SliderAtt> widthAtt, levelAtt, spaceAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt;
-
-    bool scShown = false; float rideShown = 0.0f;
+    int shownTemplate = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (HarunEditor)
 };

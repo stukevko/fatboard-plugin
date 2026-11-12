@@ -3,39 +3,80 @@
 #include <array>
 #include <vector>
 #include <cmath>
+#include "VoiceCurve.h"
+#include "HarunSpace.h"
 
 // ============================================================================
-//  Harun v1 – the double/harmony track, finished
+//  Harun v2 – the double / harmony track, finished
 //
-//  You recorded the double (or the harmony). Put Harun on THAT track. It turns
-//  the single take into the wide, tucked-in L/R layer a mixer would build by
-//  hand – without the hand:
+//  You recorded the double (or the harmony). Put Harun on THAT track and pick
+//  a template. No sidechain, no routing.
 //
-//    in ─┬─► L path: short delay a, tone, saturation ─► pan L
-//        └─► R path: short delay b, all-pass colour,  ─► pan R
-//                    tone, saturation
-//                                     × auto level (vs. the lead on the sidechain,
-//                                       or vs. the track's own loudness)
+//    in ─┬─► L path: short delay a ──────────────┐
+//        └─► R path: short delay b, all-pass ────┤
+//                                                ▼
+//            EQ from the Scrub family  →  presence dip  →  saturation
+//                                                ▼
+//                          width  →  level  →  + hall / echo (ducked)
 //
-//  What makes it sound "mixed":
-//   - two slightly different arrival times (Haas) → width without phase smear
-//   - an all-pass "colour" on one side → the sides decorrelate, mono stays clean
-//   - the low end is taken out and the top rolled a touch → layer sits behind
-//   - a hair of saturation glues it to the lead
-//   - AUTO LEVEL: the layer follows the lead's loudness (sidechain) a few dB
-//     under it, so it never pokes out and never vanishes
+//  Why it fits a lead that went through Scrub:
+//   - the layer gets the SAME voice curve (same mud and harsh cuts), so lead and
+//     layer are one tonal family …
+//   - … but cut higher at the bottom, lower at the top, and with a wide dip at
+//     3 kHz: the lead keeps the body, the presence and the air for itself
+//   - two arrival times + an all-pass on one side → wide, mono stays clean
+//   - a space that is already filtered, de-essed and ducked
 //
-//  No pitch shifting, no detection, zero latency. One knob (Amount), one
-//  Width, and a Tuck knob for how far under the lead it sits.
-//
-//  All TUNE values in Settings.
+//  No pitch shifting, zero latency.
+//  All TUNE values are in the templates below.
 // ============================================================================
+
+struct HarunTemplate
+{
+    const char* name;
+    // tone: the Scrub voice curve, shaped for a layer
+    float lowCutHz, mud, harsh, topHz;
+    float presenceDb;                 // wide dip at 3 kHz – the lead owns this
+    float drive;                      // 0..1 saturation
+    // what the template writes into the knobs
+    float width;                      // 0..1
+    float levelDb;                    // layer level
+    float space;                      // 0..1
+    int   spaceType;                  // 0 Hall, 1 Echo, 2 Hall + Echo
+    // fixed character of the space
+    HarunSpace::Space hall;
+    HarunSpace::Echo  echo;
+};
+
+namespace HarunTemplates
+{
+    static constexpr int count = 4;
+    // TUNE                                    name       lowCut  mud   harsh  top      pres   drive  width  level  space  type  hall                      echo
+    static constexpr HarunTemplate all[count] = {
+        { "Double",  150.0f, 1.0f, 1.0f, 9000.0f, -2.5f, 0.25f, 0.75f,  -6.0f, 0.12f, 0, HarunSpace::Space::Tight, HarunSpace::Echo::Eighth  },
+        { "Wide",    170.0f, 1.2f, 1.0f, 8500.0f, -3.5f, 0.30f, 1.00f,  -7.0f, 0.18f, 0, HarunSpace::Space::Room,  HarunSpace::Echo::Eighth  },
+        { "Harmony", 220.0f, 1.3f, 0.8f, 9500.0f, -3.0f, 0.15f, 0.85f,  -8.0f, 0.28f, 0, HarunSpace::Space::Room,  HarunSpace::Echo::Quarter },
+        { "Far",     250.0f, 1.4f, 1.0f, 7000.0f, -4.5f, 0.20f, 1.00f, -10.0f, 0.40f, 2, HarunSpace::Space::Far,   HarunSpace::Echo::Quarter },
+    };
+    inline const HarunTemplate& get (int i) { return all[juce::jlimit (0, count - 1, i)]; }
+
+    static constexpr float presenceHz = 3000.0f, presenceQ = 0.7f;
+
+    inline FatboardCurve::Shape shapeOf (const HarunTemplate& t)
+    {
+        FatboardCurve::Shape s; s.lowCutHz = t.lowCutHz; s.mud = t.mud; s.harsh = t.harsh; s.topHz = t.topHz; return s;
+    }
+
+    /** The layer EQ at one frequency (dB). For the display. */
+    inline float responseDb (const HarunTemplate& t, float hz)
+    {
+        return VoiceCurve::responseDb (hz, 1.0f, shapeOf (t)) + VoiceCurve::bellDb (hz, presenceHz, presenceQ, t.presenceDb);
+    }
+}
 
 class HarunEngine
 {
 public:
-    enum class Mode { Double = 0, Harmony = 1 };     // Harmony: a bit darker, further back, less wide
-
     struct Settings
     {
         // timing (ms) – Haas offsets. Small! 20+ ms starts to sound like a slap.
@@ -43,25 +84,9 @@ public:
         float delayRMs = 13.0f;             // TUNE
         float wobbleMs = 0.35f;             // TUNE – tiny, slow movement so it isn't static
         float wobbleHz = 0.05f;             // TUNE
-        // tone of the layer
-        float hpfHz = 160.0f;               // TUNE – Double
-        float hpfHzHarmony = 220.0f;        // TUNE – Harmony sits further back
-        float lowShelfHz = 300.0f;  float lowShelfDb = -2.0f;      // TUNE
-        float presenceHz = 3200.0f; float presenceDb = -1.5f;      // TUNE – the lead owns the presence
-        float airHz = 9000.0f;      float airDb = -2.0f;           // TUNE
-        float airDbHarmony = -3.5f;                                // TUNE
         // decorrelation: all-pass chain on R (frequency-dependent phase, flat magnitude)
         float allpassHz[3] = { 420.0f, 1600.0f, 5200.0f };         // TUNE
-        // saturation (0..1 drive at Amount = 1)
-        float drive = 0.25f;                // TUNE
-        // level
-        float layerDbDouble  = -6.0f;       // TUNE – under the lead at Tuck = 50 %
-        float layerDbHarmony = -8.0f;       // TUNE
-        float tuckRangeDb    = 10.0f;       // TUNE – Tuck knob range (0 % = +5 dB louder than default, 100 % = -5 dB)
-        float followAttackMs = 25.0f;       // TUNE – auto level follows the lead this fast
-        float followReleaseMs = 180.0f;     // TUNE
-        float followMaxDb = 12.0f;          // TUNE – never ride more than this
-        float gateDb = -60.0f;
+        float spaceDuck = 0.6f;             // TUNE – how far the space is pushed down while the layer sings
     };
     Settings settings;
 
@@ -69,88 +94,60 @@ public:
     {
         sr = sampleRate; channels = juce::jlimit (1, 2, numChannels);
         mono.setSize (1, maxBlockSize);
+        layer.setSize (2, maxBlockSize);
         const int maxDelay = (int) (sr * 0.04);
         for (int i = 0; i < 2; ++i)
         {
             auto& p = path[(size_t) i];
             p.delay.assign ((size_t) maxDelay, 0.0f); p.w = 0;
-            p.hpf.coefficients  = juce::dsp::IIR::Coefficients<float>::makeHighPass  (sr, settings.hpfHz, 0.707f);
-            p.low.coefficients  = juce::dsp::IIR::Coefficients<float>::makeLowShelf  (sr, settings.lowShelfHz, 0.7f, juce::Decibels::decibelsToGain (settings.lowShelfDb));
-            p.pres.coefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sr, settings.presenceHz, 1.0f, juce::Decibels::decibelsToGain (settings.presenceDb));
-            p.air.coefficients  = juce::dsp::IIR::Coefficients<float>::makeHighShelf (sr, settings.airHz, 0.7f, juce::Decibels::decibelsToGain (settings.airDb));
             for (int k = 0; k < 3; ++k)
             {
                 p.ap[k].coefficients = juce::dsp::IIR::Coefficients<float>::makeAllPass (sr, settings.allpassHz[k], 0.6f);
                 p.ap[k].reset();
             }
-            p.hpf.reset(); p.low.reset(); p.pres.reset(); p.air.reset();
+            p.pres.coefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, HarunTemplates::presenceHz, HarunTemplates::presenceQ, 1.0f);
+            p.pres.reset();
             p.lfoPhase = (float) i * 1.7f;
         }
-        applyMode (mode, true);
-        layerEnvDb = -100.0f; leadEnvDb = -100.0f; followGain = 1.0f; outGain = 0.0f;
+        curve.prepare (sr, 2);
+        space.prepare (sr, maxBlockSize, channels);
+        applyTemplate (templateIndex);
+        gain = juce::Decibels::decibelsToGain (levelDb);
+        levelNow = -100.0f;
     }
 
     void reset()
     {
-        for (auto& p : path) { std::fill (p.delay.begin(), p.delay.end(), 0.0f); p.hpf.reset(); p.low.reset(); p.pres.reset(); p.air.reset(); for (auto& a : p.ap) a.reset(); }
-        layerEnvDb = -100.0f; leadEnvDb = -100.0f; followGain = 1.0f;
+        for (auto& p : path) { std::fill (p.delay.begin(), p.delay.end(), 0.0f); p.pres.reset(); for (auto& a : p.ap) a.reset(); }
+        curve.reset(); space.reset();
     }
 
-    void setParams (Mode m, float amountIn, float widthIn, float tuckIn, bool sidechainPresent)
+    /** spaceType: 0 Hall, 1 Echo, 2 Hall + Echo. */
+    void setParams (int templateIdx, float widthIn, float levelDbIn, float spaceIn, int spaceType, double bpm)
     {
-        if (m != mode) applyMode (m, false);
-        amount = juce::jlimit (0.0f, 1.0f, amountIn);
-        width  = juce::jlimit (0.0f, 1.0f, widthIn);
-        tuck   = juce::jlimit (0.0f, 1.0f, tuckIn);
-        hasSidechain = sidechainPresent;
+        templateIdx = juce::jlimit (0, HarunTemplates::count - 1, templateIdx);
+        if (templateIdx != templateIndex) applyTemplate (templateIdx);
+        width   = juce::jlimit (0.0f, 1.0f, widthIn);
+        levelDb = juce::jlimit (-24.0f, 6.0f, levelDbIn);
+        const auto& t = HarunTemplates::get (templateIndex);
+        space.setParams (t.hall, spaceType != 1, spaceType == 0 ? HarunSpace::Echo::Off : t.echo,
+                         juce::jlimit (0.0f, 1.0f, spaceIn), settings.spaceDuck, bpm);
     }
 
-    /** `lead` may be null (no sidechain): the layer then follows its own loudness. */
-    void process (juce::AudioBuffer<float>& buffer, const juce::AudioBuffer<float>* lead)
+    void process (juce::AudioBuffer<float>& buffer)
     {
         const int n = buffer.getNumSamples();
         if (n == 0) return;
         const int nCh = juce::jmin (channels, buffer.getNumChannels());
         const float blockMs = 1000.0f * (float) n / (float) sr;
+        const auto& t = HarunTemplates::get (templateIndex);
 
         // ---- mono source of the layer ----------------------------------------
         auto* m = mono.getWritePointer (0);
         juce::FloatVectorOperations::copy (m, buffer.getReadPointer (0), n);
         if (nCh > 1) { juce::FloatVectorOperations::add (m, buffer.getReadPointer (1), n); juce::FloatVectorOperations::multiply (m, 0.5f, n); }
 
-        // ---- envelopes ---------------------------------------------------------
-        const float layerDb = rmsDb (m, n);
-        layerEnvDb += (layerDb - layerEnvDb) * (layerDb > layerEnvDb ? coef (settings.followAttackMs, blockMs) : coef (settings.followReleaseMs, blockMs));
-        float leadDb = -100.0f;
-        if (lead != nullptr && lead->getNumChannels() > 0 && lead->getNumSamples() >= n)
-        {
-            double acc = 0.0; const int lc = lead->getNumChannels();
-            for (int ch = 0; ch < lc; ++ch) { const float* l = lead->getReadPointer (ch); for (int i = 0; i < n; ++i) acc += l[i] * l[i]; }
-            leadDb = juce::Decibels::gainToDecibels ((float) std::sqrt (acc / (double) (n * lc)) + 1.0e-9f);
-            leadEnvDb += (leadDb - leadEnvDb) * (leadDb > leadEnvDb ? coef (settings.followAttackMs, blockMs) : coef (settings.followReleaseMs, blockMs));
-        }
-
-        // ---- auto level ----------------------------------------------------------
-        // target: layer sits `layerDb + tuck offset` under the lead. Without a sidechain the
-        // layer just gets a gentle levelling against its own long-term loudness.
-        const float tuckDb = (0.5f - tuck) * settings.tuckRangeDb;                 // +5 .. -5
-        const float targetUnderDb = (mode == Mode::Double ? settings.layerDbDouble : settings.layerDbHarmony) + tuckDb;
-        float ride = 0.0f;
-        if (hasSidechain && leadEnvDb > settings.gateDb && layerEnvDb > settings.gateDb)
-            ride = (leadEnvDb + targetUnderDb) - layerEnvDb;                        // dB we need to add (or remove)
-        else if (layerEnvDb > settings.gateDb)
-            ride = (longTermDb + targetUnderDb + 6.0f) - layerEnvDb;                 // mild self-levelling
-        ride = juce::jlimit (-settings.followMaxDb, settings.followMaxDb, ride);
-        const float wantFollow = juce::Decibels::decibelsToGain (ride);
-        followGain += (wantFollow - followGain) * coef (wantFollow < followGain ? settings.followAttackMs : settings.followReleaseMs, blockMs);
-        if (layerEnvDb > settings.gateDb) longTermDb += (layerEnvDb - longTermDb) * coef (3000.0f, blockMs);
-
-        const float wantOut = amount;
-        outGain += (wantOut - outGain) * coef (20.0f, blockMs);
-
-        // ---- two paths ---------------------------------------------------------
-        const float drv = 1.0f + settings.drive * amount * 4.0f;
-        const float wet = settings.drive * amount;
+        // ---- two arrival times, one side coloured ------------------------------
         for (int side = 0; side < 2; ++side)
         {
             auto& p = path[(size_t) side];
@@ -159,8 +156,7 @@ public:
             const float dMs = baseMs + std::sin (p.lfoPhase) * settings.wobbleMs;
             const float dS = juce::jlimit (1.0f, (float) p.delay.size() - 2.0f, dMs * 0.001f * (float) sr);
             const int len = (int) p.delay.size();
-            auto* out = side == 0 ? outL.data() : outR.data();
-            if ((int) outL.size() < n) { outL.resize ((size_t) n); outR.resize ((size_t) n); out = side == 0 ? outL.data() : outR.data(); }
+            auto* out = layer.getWritePointer (side);
             for (int i = 0; i < n; ++i)
             {
                 p.delay[(size_t) p.w] = m[i];
@@ -168,68 +164,81 @@ public:
                 const int i0 = (int) rp; const float fr = rp - (float) i0; const int i1 = (i0 + 1) % len;
                 float y = p.delay[(size_t) i0] + (p.delay[(size_t) i1] - p.delay[(size_t) i0]) * fr;
                 p.w = (p.w + 1) % len;
-                if (side == 1) for (auto& a : p.ap) y = a.processSample (y);      // colour one side → decorrelated
-                y = p.hpf.processSample (y);
-                y = p.low.processSample (y);
-                y = p.pres.processSample (y);
-                y = p.air.processSample (y);
-                const float sat = std::tanh (y * drv) / drv;
-                y = y + (sat - y) * wet;
+                if (side == 1) for (auto& a : p.ap) y = a.processSample (y);
                 out[i] = y;
             }
         }
 
-        // ---- replace the track with the finished layer ---------------------------
-        const float g = followGain * outGain;
+        // ---- tone: Scrub family curve + presence dip + a hair of saturation ------
+        juce::AudioBuffer<float> view (layer.getArrayOfWritePointers(), 2, n);
+        curve.setAmount (1.0f, n);
+        curve.processPre (view);
+        const float drv = 1.0f + t.drive * 4.0f, wet = t.drive;
+        for (int side = 0; side < 2; ++side)
+        {
+            auto* d = view.getWritePointer (side);
+            auto& pres = path[(size_t) side].pres;
+            for (int i = 0; i < n; ++i)
+            {
+                float y = pres.processSample (d[i]);
+                const float sat = std::tanh (y * drv) / drv;
+                d[i] = y + (sat - y) * wet;
+            }
+        }
+        curve.processLowPass (view);
+
+        // ---- width + level → replaces the track ----------------------------------
+        const float wantGain = juce::Decibels::decibelsToGain (levelDb);
         const float same = 0.5f + 0.5f * width, other = 0.5f - 0.5f * width;
+        const float* L = view.getReadPointer (0); const float* R = view.getReadPointer (1);
+        double acc = 0.0;
         for (int i = 0; i < n; ++i)
         {
-            const float l = outL[(size_t) i] * g, r = outR[(size_t) i] * g;
-            const float dryL = buffer.getReadPointer (0)[i];
-            const float dryR = nCh > 1 ? buffer.getReadPointer (1)[i] : dryL;
-            // Amount blends from the untouched track (0) to the finished layer (1)
+            gain += (wantGain - gain) * 0.002f;
+            const float l = L[i] * gain, r = R[i] * gain;
             if (nCh > 1)
             {
-                buffer.getWritePointer (0)[i] = dryL * (1.0f - outGain) + (l * same + r * other);
-                buffer.getWritePointer (1)[i] = dryR * (1.0f - outGain) + (r * same + l * other);
+                buffer.getWritePointer (0)[i] = l * same + r * other;
+                buffer.getWritePointer (1)[i] = r * same + l * other;
             }
-            else buffer.getWritePointer (0)[i] = dryL * (1.0f - outGain) + 0.5f * (l + r);
+            else buffer.getWritePointer (0)[i] = 0.5f * (l + r);
+            acc += 0.5 * ((double) l * l + (double) r * r);
         }
+        const float db = juce::Decibels::gainToDecibels ((float) std::sqrt (acc / n) + 1.0e-9f);
+        levelNow += (db - levelNow) * (db > levelNow ? 0.5f : 0.08f);
+
+        // ---- hall / echo on top ---------------------------------------------------
+        space.process (buffer);
     }
 
     // ---- UI ---------------------------------------------------------------
-    float getRideDb() const { return juce::Decibels::gainToDecibels (followGain); }
-    bool  usingSidechain() const { return hasSidechain && leadEnvDb > settings.gateDb; }
-    float getActivity() const { return juce::jlimit (0.0f, 1.0f, outGain * (layerEnvDb > settings.gateDb ? 1.0f : 0.2f)); }
+    float getActivity() const { return juce::jlimit (0.0f, 1.0f, (levelNow + 60.0f) / 50.0f); }
+    float getSpaceMeter() const { return space.getWetMeter(); }
+    int   getTemplate() const { return templateIndex; }
 
 private:
-    static float coef (float ms, float blockMs) { return 1.0f - std::exp (-blockMs / ms); }
-    static float rmsDb (const float* x, int n) { double a = 0; for (int i = 0; i < n; ++i) a += x[i] * x[i]; return juce::Decibels::gainToDecibels ((float) std::sqrt (a / (double) n) + 1.0e-9f); }
-
-    void applyMode (Mode m, bool)
+    void applyTemplate (int idx)
     {
-        mode = m;
-        const bool h = (m == Mode::Harmony);
-        for (auto& p : path)
-        {
-            *p.hpf.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighPass (sr, h ? settings.hpfHzHarmony : settings.hpfHz, 0.707f);
-            *p.air.coefficients = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (sr, settings.airHz, 0.7f, juce::Decibels::decibelsToGain (h ? settings.airDbHarmony : settings.airDb));
-        }
+        templateIndex = idx;
+        const auto& t = HarunTemplates::get (idx);
+        curve.setShape (HarunTemplates::shapeOf (t));
+        auto c = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, HarunTemplates::presenceHz, HarunTemplates::presenceQ,
+                                                                      juce::Decibels::decibelsToGain (t.presenceDb));
+        for (auto& p : path) *p.pres.coefficients = *c;
     }
 
     struct Path
     {
         std::vector<float> delay; int w = 0;
-        juce::dsp::IIR::Filter<float> hpf, low, pres, air, ap[3];
+        juce::dsp::IIR::Filter<float> pres, ap[3];
         float lfoPhase = 0.0f;
     };
 
     double sr = 48000.0; int channels = 2;
-    juce::AudioBuffer<float> mono;
-    std::vector<float> outL, outR;
+    juce::AudioBuffer<float> mono, layer;
     std::array<Path, 2> path;
-    Mode mode = Mode::Double;
-    float amount = 1.0f, width = 0.8f, tuck = 0.5f;
-    bool hasSidechain = false;
-    float layerEnvDb = -100.0f, leadEnvDb = -100.0f, longTermDb = -20.0f, followGain = 1.0f, outGain = 0.0f;
+    VoiceCurve curve;
+    HarunSpace space;
+    int templateIndex = 0;
+    float width = 0.75f, levelDb = -6.0f, gain = 0.5f, levelNow = -100.0f;
 };

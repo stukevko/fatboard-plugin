@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.6.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.7.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -46,7 +46,6 @@ set(FATBOARD_COMMON_SOURCES
   Source/Common/FatboardLookAndFeel.h
   Source/Common/FatboardWidgets.h
   Source/Common/CleanupEngine.h
-  Source/Common/RoomCarver.h
   Source/Common/VoiceCurve.h
   Source/Common/AirEngine.h)
 
@@ -118,7 +117,7 @@ target_sources(ScrubPro PRIVATE
   ${FATBOARD_COMMON_SOURCES})
 fatboard_configure(ScrubPro)
 
-# ---- Harun (L/R layer for a recorded double / harmony) -------------------------
+# ---- Harun (templates for a recorded double / harmony: L/R layer, Scrub-matched EQ, hall + echo) ----
 juce_add_plugin(Harun
   PRODUCT_NAME "Harun"
   COMPANY_NAME "Fatboard"
@@ -129,7 +128,7 @@ juce_add_plugin(Harun
   IS_SYNTH FALSE
   NEEDS_MIDI_INPUT FALSE
   COPY_PLUGIN_AFTER_BUILD FALSE
-  VST3_CATEGORIES Fx Pitch\ Shift
+  VST3_CATEGORIES Fx Spatial
   AU_MAIN_TYPE kAudioUnitType_Effect)
 
 target_sources(Harun PRIVATE
@@ -138,6 +137,7 @@ target_sources(Harun PRIVATE
   Source/Harun/HarunEditor.cpp
   Source/Harun/HarunEditor.h
   Source/Harun/HarunEngine.h
+  Source/Harun/HarunSpace.h
   ${FATBOARD_COMMON_SOURCES})
 fatboard_configure(Harun)
 target_include_directories(Harun PRIVATE Source/Harun)
@@ -215,12 +215,6 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(SmashTest PRIVATE Source/Common Source/Smash)
   target_compile_definitions(SmashTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(SmashTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
-
-  juce_add_console_app(RoomTest PRODUCT_NAME "RoomTest")
-  target_sources(RoomTest PRIVATE Tests/RoomTest.cpp)
-  target_include_directories(RoomTest PRIVATE Source/Common)
-  target_compile_definitions(RoomTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-  target_link_libraries(RoomTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(CurveTest PRODUCT_NAME "CurveTest")
   target_sources(CurveTest PRIVATE Tests/CurveTest.cpp)

@@ -3,7 +3,6 @@
 #include "CleanupEngine.h"
 #include "VoiceCurve.h"
 #include "AirEngine.h"
-#include "RoomCarver.h"
 
 class ProProcessor : public juce::AudioProcessor
 {
@@ -37,11 +36,9 @@ public:
     juce::AudioProcessorValueTreeState apvts;
     const CleanupEngine& getEngine() const { return engine; }
     const AirEngine& getAir() const { return air; }
-    const RoomCarver& getRoom() const { return room; }
 
     static constexpr const char* kCleanup = "cleanup";
     static constexpr const char* kAir     = "air";
-    static constexpr const char* kRoom    = "room";
     static constexpr const char* kLowCut  = "lowCut";
     static constexpr const char* kMud     = "mud";
     static constexpr const char* kHarsh   = "harsh";
@@ -59,16 +56,13 @@ private:
     CleanupEngine engine;
     VoiceCurve curve;
     AirEngine air;
-    RoomCarver room;
     std::atomic<float>* cleanupParam = nullptr;
     std::atomic<float>* airParam = nullptr;
-    std::atomic<float>* roomParam = nullptr;
     std::atomic<float>* lowCutParam = nullptr;
     std::atomic<float>* mudParam = nullptr;
     std::atomic<float>* harshParam = nullptr;
     std::atomic<float>* topParam = nullptr;
     std::atomic<float>* activeParam = nullptr;
-    bool wasRoom = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ProProcessor)
 };
