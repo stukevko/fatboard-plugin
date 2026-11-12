@@ -19,7 +19,8 @@ ProEditor::ProEditor (ProProcessor& p)
     scrubAtt  = std::make_unique<SliderAtt> (proc.apvts, ProProcessor::kCleanup, scrubKnob.slider);
     airAtt    = std::make_unique<SliderAtt> (proc.apvts, ProProcessor::kAir, airKnob.slider);
     activeAtt = std::make_unique<ButtonAtt> (proc.apvts, ProProcessor::kActive, header.power);
-    airKnob.slider.setDoubleClickReturnValue (true, 0.35);
+    airKnob.slider.setDoubleClickReturnValue (true, 0.0);
+    scrubKnob.slider.setDoubleClickReturnValue (true, FatboardCurve::fullAt);
 
     for (int i = 0; i < 4; ++i)
     {
@@ -93,7 +94,7 @@ void ProEditor::paint (juce::Graphics& g)
     g.drawFittedText ("The line is what I do to your voice right now. Below the middle: taken out. Above: added.",
                       claim.reduced (0, 8), juce::Justification::centredLeft, 3);
 
-    g.drawText ("Scrub does the job. The four small ones are for fine tuning. Double-click resets.", r.removeFromBottom (24), juce::Justification::centred, false);
+    g.drawText ("Scrub is your EQ. Air only if you want it. The small ones are optional. Double-click resets.", r.removeFromBottom (24), juce::Justification::centred, false);
 }
 
 void ProEditor::resized()

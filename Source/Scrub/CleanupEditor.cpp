@@ -9,6 +9,7 @@ CleanupEditor::CleanupEditor (CleanupProcessor& p)
     addAndMakeVisible (header);
     addAndMakeVisible (curveView);
     addAndMakeVisible (knob);
+    knob.slider.setDoubleClickReturnValue (true, FatboardCurve::fullAt);
     addAndMakeVisible (activity);
     addAndMakeVisible (footer);
 

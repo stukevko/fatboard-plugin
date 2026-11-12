@@ -6,7 +6,7 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { CleanupProcessor::kAmount, 1 }, "Amount",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f,
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), FatboardCurve::fullAt,
         juce::AudioParameterFloatAttributes().withStringFromValueFunction (
             [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; })));
     layout.add (std::make_unique<juce::AudioParameterBool> (

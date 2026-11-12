@@ -9,10 +9,10 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ProProcessor::kCleanup, 1 }, "Scrub",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.5f, pct));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), FatboardCurve::fullAt, pct));   // default = exactly the EQ preset
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { ProProcessor::kAir, 1 }, "Air",
-        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.35f, pct));
+        juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.0f, pct));                    // Air is off until you want it
 
     // fine tuning: the four parts of the voice curve. Defaults = the preset.
     auto hzAttr = juce::AudioParameterFloatAttributes().withStringFromValueFunction (
