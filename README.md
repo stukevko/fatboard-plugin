@@ -95,7 +95,6 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
   Bänder 300–6500 Hz mit Gewichtung (Sprache 1–4 kHz am stärksten), `maxDb` 4 pro Band (~5–6 dB im Sprachbereich bei 100 %), Attack 12 ms, Release 160 ms.
   **In FL Studio:** zweite Scrub-Pro-Instanz auf den Beat-/Sample-Bus, Modus Room; Vocal-Track → Send auf diesen Bus → „Sidechain to this track". Mode-Knopf = wie viel Platz.
 
-  Pro Modus: HPF, Low-Shelf, Low-Mid-Cut, Box-Cut, Presence, High-Shelf, De-Esser (Frequenz, max. Cut, Schwelle), Sättigung (`drive`), Trim. Der Mode-Knopf skaliert alle dB-Werte und die Sättigung.
 
 Ein Offline-Test ohne DAW: `cmake -B build -DFATBOARD_BUILD_TESTS=ON`, dann Target `FatboardEngineTest` bauen und starten. Er druckt pro Band, was das Plugin an einem synthetischen Signal (Resonanz bei 180 Hz, dumpfe Höhen) macht.
 
