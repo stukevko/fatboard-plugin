@@ -2,6 +2,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "FatboardLookAndFeel.h"
+#include <array>
+#include <cmath>
 
 // ============================================================================
 //  Small reusable pieces shared by Cleanup and Pro editors
@@ -111,6 +113,71 @@ public:
 
 private:
     float activity = 0.0f;
+};
+
+/** The picture of what the plugin is doing right now: one line over 20 Hz – 20 kHz.
+    Below the middle = taken out, above = added. Not an analyzer: it shows the plugin, not the audio. */
+class CurveView : public juce::Component
+{
+public:
+    static constexpr int points = 128;
+    static constexpr float minHz = 30.0f, maxHz = 20000.0f, topDb = 9.0f, bottomDb = -15.0f;
+
+    static float hzAt (int i) { return minHz * std::pow (maxHz / minHz, (float) i / (float) (points - 1)); }
+
+    /** fn (hz) → dB. Repaints only when the picture changed. */
+    template <typename Fn>
+    void update (Fn&& fn)
+    {
+        bool changed = false;
+        for (int i = 0; i < points; ++i)
+        {
+            const float v = juce::jlimit (bottomDb, topDb, fn (hzAt (i)));
+            if (std::abs (v - db[(size_t) i]) > 0.03f) { db[(size_t) i] = v; changed = true; }
+        }
+        if (changed) repaint();
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        using namespace FatboardColours;
+        auto r = getLocalBounds().toFloat();
+        g.setColour (panel);
+        g.fillRoundedRectangle (r, 10.0f);
+        auto in = r.reduced (12.0f, 10.0f);
+        auto yOf = [in] (float d) { return in.getY() + in.getHeight() * (topDb - d) / (topDb - bottomDb); };
+        auto xOf = [in] (float hz) { return in.getX() + in.getWidth() * std::log (hz / minHz) / std::log (maxHz / minHz); };
+
+        // frequency marks
+        g.setFont (FatboardLookAndFeel::body (9.5f));
+        for (auto [hz, name] : { std::pair<float, const char*> { 100.0f, "100" }, { 1000.0f, "1k" }, { 10000.0f, "10k" } })
+        {
+            g.setColour (line);
+            g.fillRect (juce::Rectangle<float> (xOf (hz), in.getY(), 1.0f, in.getHeight()));
+            g.setColour (grey.withAlpha (0.7f));
+            g.drawText (name, juce::Rectangle<float> (xOf (hz) + 4.0f, in.getBottom() - 11.0f, 30.0f, 11.0f), juce::Justification::centredLeft, false);
+        }
+        g.setColour (line);
+        g.fillRect (juce::Rectangle<float> (in.getX(), yOf (0.0f), in.getWidth(), 1.0f));
+
+        juce::Path curve, fill;
+        const float zero = yOf (0.0f);
+        for (int i = 0; i < points; ++i)
+        {
+            const float x = in.getX() + in.getWidth() * (float) i / (float) (points - 1), y = yOf (db[(size_t) i]);
+            if (i == 0) { curve.startNewSubPath (x, y); fill.startNewSubPath (x, zero); fill.lineTo (x, y); }
+            else        { curve.lineTo (x, y); fill.lineTo (x, y); }
+        }
+        fill.lineTo (in.getRight(), zero); fill.closeSubPath();
+        const auto accent = FatboardLookAndFeel::accentOf (*this);
+        g.setColour (accent.withAlpha (0.16f));
+        g.fillPath (fill);
+        g.setColour (accent);
+        g.strokePath (curve, juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
+
+private:
+    std::array<float, points> db {};
 };
 
 /** Footer line: claim on the left, url + version on the right. */

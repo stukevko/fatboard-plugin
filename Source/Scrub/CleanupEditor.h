@@ -21,6 +21,7 @@ private:
 
     FatboardHeader header { "Scrub" };
     BigKnob knob { "Amount" };
+    CurveView curveView;
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 

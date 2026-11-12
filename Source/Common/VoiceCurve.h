@@ -43,6 +43,17 @@ namespace FatboardCurve
         { 3130.0f, -3.4f, 8.0f },
     };
 
+    /** Fine tuning (Scrub Pro). The defaults ARE the preset. */
+    struct Shape
+    {
+        float lowCutHz = hpHz;     // 20 = off … 250
+        float mud      = 1.0f;     // scales the 192 / 313 / 634 Hz cuts (0 … 2)
+        float harsh    = 1.0f;     // scales the 1.35 / 3.13 kHz cuts   (0 … 2)
+        float topHz    = lpHz;     // 5 k … 20 k (= off)
+        bool operator== (const Shape& o) const { return lowCutHz == o.lowCutHz && mud == o.mud && harsh == o.harsh && topHz == o.topHz; }
+    };
+    inline float bandScale (const Shape& s, int band) { return band < 3 ? s.mud : s.harsh; }
+
     // the knob reaches the full curve here, so normal settings already give "the EQ"
     static constexpr float fullAt = 0.6f;
     inline float fromKnob (float knob) { return juce::jlimit (0.0f, 1.0f, knob / fullAt); }
@@ -72,6 +83,9 @@ public:
         current = -1.0f; preOn = lpOn = false;
     }
 
+    /** Fine tuning. Call before setAmount. */
+    void setShape (const FatboardCurve::Shape& s) { if (! (s == shape)) { shape = s; shapeDirty = true; } }
+
     /** Call once per block before processPre. amount 0..1. */
     void setAmount (float amount, int blockSamples)
     {
@@ -81,7 +95,7 @@ public:
         const float c = 1.0f - std::exp (-(float) blockSamples / (0.040f * (float) sr));
         float next = current + (amount - current) * c;
         if (std::abs (next - amount) < 0.0005f) next = amount;
-        if (next != applied) { current = next; update(); } else current = next;
+        if (next != applied || shapeDirty) { current = next; update(); } else current = next;
     }
 
     void processPre (juce::AudioBuffer<float>& buffer)
@@ -119,24 +133,58 @@ private:
     void update()
     {
         using C = juce::dsp::IIR::Coefficients<float>;
-        applied = current;
+        applied = current; shapeDirty = false;
         const float a = applied;
-        const float hpF = 20.0f * std::pow (FatboardCurve::hpHz / 20.0f, a);
-        const float lpF = juce::jmin (20000.0f * std::pow (FatboardCurve::lpHz / 20000.0f, a), (float) sr * 0.45f);
+        const float hpF = hpFreq (shape, a);
+        const float lpF = juce::jmin (lpFreq (shape, a), (float) sr * 0.45f);
         auto h = C::makeHighPass (sr, hpF, 0.707f);
         auto l = C::makeLowPass  (sr, lpF, 0.707f);
         for (int ch = 0; ch < 2; ++ch) { *hp[ch].coefficients = *h; *lp[ch].coefficients = *l; }
         for (int b = 0; b < FatboardCurve::numBands; ++b)
         {
             const auto& bd = FatboardCurve::bands[b];
-            auto p = C::makePeakFilter (sr, bd.hz, bd.q, juce::Decibels::decibelsToGain (bd.db * a));
+            auto p = C::makePeakFilter (sr, bd.hz, bd.q, juce::Decibels::decibelsToGain (bd.db * a * FatboardCurve::bandScale (shape, b)));
             for (int ch = 0; ch < 2; ++ch) *pk[ch][b].coefficients = *p;
         }
     }
 
+public:
+    static float hpFreq (const FatboardCurve::Shape& s, float a) { return 20.0f * std::pow (juce::jlimit (20.0f, 400.0f, s.lowCutHz) / 20.0f, a); }
+    static float lpFreq (const FatboardCurve::Shape& s, float a) { return 20000.0f * std::pow (juce::jlimit (3000.0f, 20000.0f, s.topHz) / 20000.0f, a); }
+
+    /** What the curve does at one frequency (dB). For the display. */
+    static float responseDb (float hz, float a, const FatboardCurve::Shape& s, bool withLowPass = true)
+    {
+        if (a <= 0.0f) return 0.0f;
+        // 2nd-order Butterworth magnitudes, exact enough for a picture
+        const float rh = hpFreq (s, a) / hz, rl = hz / lpFreq (s, a);
+        float db = -10.0f * std::log10 (1.0f + rh * rh * rh * rh);
+        if (withLowPass) db += -10.0f * std::log10 (1.0f + rl * rl * rl * rl);
+        for (int b = 0; b < FatboardCurve::numBands; ++b)
+        {
+            const auto& bd = FatboardCurve::bands[b];
+            db += bellDb (hz, bd.hz, bd.q, bd.db * a * FatboardCurve::bandScale (s, b));
+        }
+        return db;
+    }
+
+    /** Analog bell response in dB (gain g dB at f0, quality q), evaluated at hz. */
+    static float bellDb (float hz, float f0, float q, float g)
+    {
+        if (std::abs (g) < 0.01f) return 0.0f;
+        const float A = std::pow (10.0f, g / 40.0f), w = hz / f0, w2 = w * w;
+        const float num = (1.0f - w2) * (1.0f - w2) + (A * w / q) * (A * w / q);
+        const float den = (1.0f - w2) * (1.0f - w2) + (w / (A * q)) * (w / (A * q));
+        return 10.0f * std::log10 (num / den);
+    }
+
+private:
+
     double sr = 48000.0;
     int channels = 2;
     float current = -1.0f, applied = 0.0f;
+    FatboardCurve::Shape shape;
+    bool shapeDirty = false;
     bool preOn = false, lpOn = false;
     juce::dsp::IIR::Filter<float> hp[2], lp[2], pk[2][FatboardCurve::numBands];
 };

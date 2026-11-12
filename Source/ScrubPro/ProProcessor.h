@@ -42,6 +42,17 @@ public:
     static constexpr const char* kCleanup = "cleanup";
     static constexpr const char* kAir     = "air";
     static constexpr const char* kRoom    = "room";
+    static constexpr const char* kLowCut  = "lowCut";
+    static constexpr const char* kMud     = "mud";
+    static constexpr const char* kHarsh   = "harsh";
+    static constexpr const char* kTop     = "top";
+
+    FatboardCurve::Shape getShape() const
+    {
+        FatboardCurve::Shape s;
+        s.lowCutHz = lowCutParam->load(); s.mud = mudParam->load(); s.harsh = harshParam->load(); s.topHz = topParam->load();
+        return s;
+    }
     static constexpr const char* kActive  = "active";
 
 private:
@@ -52,6 +63,10 @@ private:
     std::atomic<float>* cleanupParam = nullptr;
     std::atomic<float>* airParam = nullptr;
     std::atomic<float>* roomParam = nullptr;
+    std::atomic<float>* lowCutParam = nullptr;
+    std::atomic<float>* mudParam = nullptr;
+    std::atomic<float>* harshParam = nullptr;
+    std::atomic<float>* topParam = nullptr;
     std::atomic<float>* activeParam = nullptr;
     bool wasRoom = false;
 

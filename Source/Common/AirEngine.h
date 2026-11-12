@@ -108,6 +108,19 @@ public:
     }
 
     float getGuardDb() const { return guardDb; }
+    float getSmoothedAir() const { return juce::jmax (0.0f, smoothed); }
+
+    /** What Air does at one frequency right now (dB). For the display. */
+    static float responseDb (float hz, float air, float guardNow)
+    {
+        using namespace FatboardAir;
+        if (air <= 0.0f) return 0.0f;
+        const float lift = air * (1.0f - juce::jlimit (0.0f, 1.0f, guardNow / guardFadeDb));
+        auto shelf = [hz] (float f0, float g) { const float r = hz / f0, r2 = r * r; return g * r2 / (1.0f + r2); };   // smooth S-curve, good enough to draw
+        const float cut = juce::jlimit (0.0f, guardCutDb, guardNow - guardFadeDb);
+        const float w = std::log2 (hz / guardHz) * guardQ;
+        return shelf (midHz, midMaxDb * lift) + shelf (highHz, highMaxDb * lift) - cut * std::exp (-w * w * 2.0f);
+    }
 
 private:
     static float coef (float ms, float blockMs) { return 1.0f - std::exp (-blockMs / ms); }

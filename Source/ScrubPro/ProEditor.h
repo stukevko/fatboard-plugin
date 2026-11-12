@@ -16,19 +16,24 @@ public:
 private:
     void timerCallback() override;
     void refreshRoom();
+    void refreshFineLabels();
 
     ProProcessor& proc;
     FatboardLookAndFeel lnf;
 
     FatboardHeader header { "Scrub Pro" };
+    CurveView curveView;
     BigKnob scrubKnob { "Scrub" };
     BigKnob airKnob { "Air" };
+    BigKnob fine[4] { BigKnob { "Low Cut" }, BigKnob { "Mud" }, BigKnob { "Harsh" }, BigKnob { "Top" } };
     juce::TextButton roomButton { "Room" };
     ActivityMark activity;
     FatboardFooter footer { JucePlugin_VersionString };
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> scrubAtt, airAtt;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt, roomAtt;
+    using SliderAtt = juce::AudioProcessorValueTreeState::SliderAttachment;
+    using ButtonAtt = juce::AudioProcessorValueTreeState::ButtonAttachment;
+    std::unique_ptr<SliderAtt> scrubAtt, airAtt, fineAtt[4];
+    std::unique_ptr<ButtonAtt> activeAtt, roomAtt;
 
     bool roomOn = false, roomLinked = false, roomVocal = false;
 
