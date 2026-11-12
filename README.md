@@ -6,13 +6,12 @@ Zwei Plugins, ein Projekt, ein Look.
 |---|---|---|---|
 | **Scrub** | Nimmt Dröhnen/Resonanzen automatisch raus, gleicht dumpfe oder harsche Höhen aus, 22-Hz-Rumble-Filter | free | ein Knopf: **Amount** |
 | **Harun** | Für die **aufgenommene** Double-/Harmony-Spur: macht aus einem Take den fertigen L/R-Layer – Haas-Versatz, Dekorrelation (mono-sicher), Tiefen raus, leicht gesättigt, **Auto-Level** unter dem Lead (Lead auf den Sidechain). Kein Pitching, keine Latenz. Mode Double/Harmony, Knöpfe **Amount**, **Width**, **Tuck**. | tbd | 1 Pill, 3 Knöpfe |
-| **Dafocus** | Vocal-Raum: Hall (8-Linien-FDN) + Tempo-Delay auf einem gefilterten, de-essten Send, beides wird von der Stimme **geduckt** und blüht in Pausen auf. Space Tight/Room/Far, Echo Off/1/8/1/4/1/8-dot, Knöpfe **Amount**, **Duck**. BPM vom Host. | tbd | 2 Pills, 2 Knöpfe |
 | **Spit** | Beatbox → Drum-MIDI. Erkennt Onsets (Spectral Flux + Energiesprung) und klassifiziert Kick/Snare/Hat; pro Pad per „learn" (3× vormachen) auf deine Laute kalibrierbar. Live-MIDI-Out (C1/D1/F#1) und **Take**: Record → Beatboxen → MIDI-Chip in die DAW ziehen, quantisiert mit **Tight** aufs **Grid**. Knöpfe **Sens**, **Tight**. Latenz ~43 ms (PDC). | tbd | 3 Pads, 2 Knöpfe |
 | **Smash** | Drum-Bus (ohne 808!): HPF 35 Hz → pegelbewusster Transient-Shaper → dynamischer Low-Mid-Cut (200–500) → Glue-Kompressor mit Auto-Schwelle → Hi-Tamer (6–9 k, dynamisch) → Tape-Sättigung → **Fit** (3-Band dyn. EQ, der die Drums dort zurücknimmt, wo das Sample auf dem Sidechain laut ist) → **Auto-Gain, pegelneutral**. Style Tight/Punch/Dirty, Knöpfe **Smash**, **Fit**. Null Latenz. | tbd | 1 Pill, 2 Knöpfe |
 | **Scrub Pro** | Scrub + Kurvenanzeige + Feintuning der Stimmkurve (**Low Cut, Mud, Harsh, Top**) + **Air** (öffnet die Stimme, mit Zischlaut-Wächter) + **Room** (auf den Beat, Vocal auf den Sidechain) | 20 $ | großer **Scrub**-Knopf, **Air**, vier kleine Feintuning-Regler, **Room**-Schalter |
 
 Formate: VST3 (Win/Mac), AU (Mac), Standalone zum schnellen Testen.
-Farben: Scrub/Scrub Pro Gelb, Harun Orange ("Ember"), Dafocus Cyan ("Ice"), Spit Lime, Smash Magenta – eine Familie, auf einen Blick unterscheidbar.
+Farben: Scrub/Scrub Pro Gelb, Harun Orange ("Ember"), Spit Lime, Smash Magenta – eine Familie, auf einen Blick unterscheidbar.
 Kein Analyzer, keine Frequenzanzeige, kein Netz, kein Account – alles läuft lokal.
 
 ---
@@ -34,7 +33,7 @@ Voraussetzungen: **Visual Studio 2022 Community** (Workload „Desktopentwicklun
 ```bat
 cd fatboard-plugins
 cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All Spit_All Smash_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Spit_All Smash_All
 ```
 
 Ergebnis:
@@ -51,7 +50,7 @@ Voraussetzungen: **Xcode** (App Store) + Command Line Tools, **CMake** (`brew in
 ```sh
 cd fatboard-plugins
 cmake -B build -G Xcode
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Dafocus_All Spit_All Smash_All
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Spit_All Smash_All
 ```
 
 Ergebnis in `build/*_artefacts/Release/{VST3,AU,Standalone}/`.
@@ -61,7 +60,7 @@ Unsignierte Builds: einmal `xattr -cr "~/Library/Audio/Plug-Ins/VST3/Scrub Pro.v
 ### Linux (nur zum Entwickeln)
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3 Dafocus_VST3 Spit_VST3 Smash_VST3
+cmake --build build --target Scrub_VST3 ScrubPro_VST3 Harun_VST3 Spit_VST3 Smash_VST3
 ```
 
 ---
@@ -78,8 +77,6 @@ Alle Klangentscheidungen sind als `// TUNE` markiert und liegen an zwei Stellen:
   Haas-Zeiten (8,5 / 13 ms), Tone des Layers (HPF, Low-Shelf, Presence, Air), All-Pass-Frequenzen für die Dekorrelation, Sättigung, Ziel-Pegel unter dem Lead (Double -6 dB, Harmony -8 dB), Auto-Level-Zeiten. Offline-Test: Target `HarunTest`.
   **In der DAW:** Harun auf die Double-Spur, Lead-Spur als Sidechain-Eingang routen (FL: Mixer-Send mit Sidechain, Ableton: Sidechain-Sektion im Plugin). Ohne Sidechain pegelt Harun gegen die eigene Lautheit.
 
-- **`Source/Dafocus/DafocusEngine.h` → `Settings` + `preset()`**
-  Send-Filter (HPF/LPF), De-Esser, Delay-Feedback und -Filter, Hall-Presets (RT60, Größe, Pre-Delay, Dämpfung, Breite), Ducking (Range, Attack, Release, Schwelle relativ zum Peak). Offline-Test: Target `DafocusTest`, optional mit WAV-Pfad.
 
 - **`Source/Spit/SpitEngine.h` → `Settings`, `resetPrototypes()`, `classify()`**
   Onset: Flux-Faktor und Energiesprung-Schwelle hängen an Sens; Totzeit 70 ms; Flux-only-Onsets < 150 ms nach einem Hit werden verworfen (Kick-Sweeps). Prototypen (low/mid/high-Anteil, Zentroid) sind Startwerte – „learn" überschreibt sie pro Nutzer und wird im Preset gespeichert. Offline-Test: `SpitTest` (synthetisches Beatbox-Pattern: 40/40 erkannt, 40/40 richtig).
@@ -115,7 +112,6 @@ Source/Common/            Engine, Vocal-Modi, Look & Feel, Widgets
 Source/Scrub/             Scrub (free)
 Source/ScrubPro/          Scrub Pro
 Source/Harun/             Harun (Engine, UI)
-Source/Dafocus/           Dafocus (Engine, UI)
 Source/Spit/              Spit (Engine, UI)
 Source/Smash/             Smash (Engine, UI)
 
@@ -124,7 +120,7 @@ Tests/EngineTest.cpp      Offline-Sanity-Test
 ```
 
 ## Changelog
-- **v0.6** – Umbau nach Kevins Vorgabe. **Scrub** bekommt als feste Basis seine Standard-Vocal-EQ-Kurve (aus dem FL-Preset „Parametric EQ 2" ausgelesen): High Pass 131 Hz, −1,8 dB @ 192 Hz, −1,7 @ 313, −1,6 @ 634, −2,0 @ 1,35 kHz (schmal), −3,4 @ 3,13 kHz (sehr schmal), Low Pass 10 kHz. Der Knopf dreht Kurve und automatisches Cleanup zusammen rein, die volle Kurve steht ab 60 %, bei 0 % bit-identisch (`VoiceCurve.h`). **Scrub Pro** = dasselbe + **Air**-Regler (Mid-/High-Air-Shelf, ein Wächter nimmt die Anhebung bei S/T-Lauten für Millisekunden weg, `AirEngine.h`) + **Room** als Schalter (großer Knopf wird dann zur Room-Stärke, Stimmkurve/Cleanup/Air sind auf dem Beat aus). Raus: Modi Crisp/Clear/Soft, Auto Balance, Leveler. Scrub Pro komprimiert nicht mehr. Fenster 640×600, großer Scrub-Knopf. Tests: `CurveTest`, `RoomTest`. Nachtrag 12.11.: **Kurvenanzeige** in Scrub und Scrub Pro (`CurveView` in `FatboardWidgets.h`): eine Linie über 30 Hz–20 kHz zeigt live, was das Plugin gerade absenkt und anhebt (Stimmkurve, Automatik, Air, im Room-Modus die Room-Bänder). Kein Analyzer, sie zeigt das Plugin, nicht das Audio. Scrub Pro bekommt vier **Feintuning-Regler**, die die Stimmkurve aufteilen: Low Cut (20–250 Hz), Mud (0–200 % der Absenkungen bei 192/313/634 Hz), Harsh (0–200 % bei 1,35/3,13 kHz), Top (Low Pass 5–20 kHz). Standardwerte = das Preset, Doppelklick setzt zurück. Fenster Scrub 420×650, Scrub Pro 640×760.
+- **v0.6** – Umbau nach Kevins Vorgabe. **Scrub** bekommt als feste Basis seine Standard-Vocal-EQ-Kurve (aus dem FL-Preset „Parametric EQ 2" ausgelesen): High Pass 131 Hz, −1,8 dB @ 192 Hz, −1,7 @ 313, −1,6 @ 634, −2,0 @ 1,35 kHz (schmal), −3,4 @ 3,13 kHz (sehr schmal), Low Pass 10 kHz. Der Knopf dreht Kurve und automatisches Cleanup zusammen rein, die volle Kurve steht ab 60 %, bei 0 % bit-identisch (`VoiceCurve.h`). **Scrub Pro** = dasselbe + **Air**-Regler (Mid-/High-Air-Shelf, ein Wächter nimmt die Anhebung bei S/T-Lauten für Millisekunden weg, `AirEngine.h`) + **Room** als Schalter (großer Knopf wird dann zur Room-Stärke, Stimmkurve/Cleanup/Air sind auf dem Beat aus). Raus: Modi Crisp/Clear/Soft, Auto Balance, Leveler. Scrub Pro komprimiert nicht mehr. Fenster 640×600, großer Scrub-Knopf. Tests: `CurveTest`, `RoomTest`. Nachtrag 12.11.: **Kurvenanzeige** in Scrub und Scrub Pro (`CurveView` in `FatboardWidgets.h`): eine Linie über 30 Hz–20 kHz zeigt live, was das Plugin gerade absenkt und anhebt (Stimmkurve, Automatik, Air, im Room-Modus die Room-Bänder). Kein Analyzer, sie zeigt das Plugin, nicht das Audio. Scrub Pro bekommt vier **Feintuning-Regler**, die die Stimmkurve aufteilen: Low Cut (20–250 Hz), Mud (0–200 % der Absenkungen bei 192/313/634 Hz), Harsh (0–200 % bei 1,35/3,13 kHz), Top (Low Pass 5–20 kHz). Standardwerte = das Preset, Doppelklick setzt zurück. Fenster Scrub 420×650, Scrub Pro 640×760. **Dafocus entfernt** (Kevins Entscheidung, 12.11.; der Code liegt in der Git-Historie bis Commit f53624f).
 - **v0.5** – (in v0.6 wieder entfernt) Scrub Pro: **Auto Balance + Leveler** in Crisp/Clear/Soft (`Source/Common/AutoBalance.h`). Auto Balance misst die Langzeit-Klangkurve der Stimme in vier breiten Bändern und zieht sie an die Zielkurve des Modus: zu viel 150–450 Hz runter, fehlende Präsenz und Air rauf, so viel wie die Aufnahme braucht (Grenzen: Low-Mid −6…+1,5 dB, Präsenz/Air −3…+6 dB). Der Leveler gleicht laute und leise Wörter an (Schwelle folgt dem eigenen Durchschnittspegel der Stimme, automatisches Makeup), dahinter ein Peak-Catcher. „Clean"-Regeln: nur Feed-Forward, nur breite Filter, Klang bewegt sich über Sekunden, Messung friert in Pausen ein, 1 dB Totzone, Amount 0 = bit-identisch. Der Mode-Knopf steuert alles mit, volle Korrektur ab ~60 %. Kein neuer Regler. Test: `BalanceTest`.
 - **v0.4** – Scrub Pro: neuer Modus **Room** (Plugin auf den BEAT, Vocal auf den Sidechain: der Beat weicht in 6 Bändern nur dort und nur dann aus, wo die Stimme gerade ist; ohne Sidechain bit-transparent). Clear/Crisp heben Konsonanten dynamisch an (Verständlichkeit, `articDb`). Scrub-Knopf neu skaliert (`knobScale` 0,65): 100 % klingt jetzt wie früher ~65 %, „volle Pulle" bleibt natürlich. Test: `RoomTest`.
 - **v0.3.2** – Neu: **Smash** (Drum-Bus mit Sample-Fit).
