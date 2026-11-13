@@ -4,7 +4,7 @@
 #include <cmath>
 
 // ============================================================================
-//  Brett – the master   (working title, v0.1)
+//  Korrent – the master   (v0.1)
 //
 //  One knob that makes the song as loud as a release, without the 808 folding.
 //
@@ -24,7 +24,7 @@
 //  All TUNE values are in Settings.
 // ============================================================================
 
-class BrettEngine
+class KorrentEngine
 {
 public:
     enum Style { Clean = 0, Warm, Hard };

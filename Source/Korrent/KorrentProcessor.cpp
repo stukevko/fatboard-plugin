@@ -1,40 +1,40 @@
-#include "BrettProcessor.h"
-#include "BrettEditor.h"
+#include "KorrentProcessor.h"
+#include "KorrentEditor.h"
 
 static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     auto pct = juce::AudioParameterFloatAttributes().withStringFromValueFunction (
         [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; });
-    layout.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { BrettProcessor::kLoud, 1 }, "Loud",
+    layout.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { KorrentProcessor::kLoud, 1 }, "Loud",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.7f, pct));
-    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { BrettProcessor::kStyle, 1 }, "Style",
+    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { KorrentProcessor::kStyle, 1 }, "Style",
         juce::StringArray { "Clean", "Warm", "Hard" }, 1));
     // CHECK is a listening aid, not part of the sound: not automatable, and never active while rendering
-    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { BrettProcessor::kCheck, 1 }, "Check",
+    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { KorrentProcessor::kCheck, 1 }, "Check",
         juce::StringArray { "Off", "Phone", "Car", "Buds" }, 0, juce::AudioParameterChoiceAttributes().withAutomatable (false)));
-    layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { BrettProcessor::kActive, 1 }, "In", true));
+    layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { KorrentProcessor::kActive, 1 }, "In", true));
     return layout;
 }
 
-BrettProcessor::BrettProcessor()
+KorrentProcessor::KorrentProcessor()
     : AudioProcessor (BusesProperties()
                         .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                         .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "Brett", makeLayout())
+      apvts (*this, nullptr, "Korrent", makeLayout())
 {
     pLoud = apvts.getRawParameterValue (kLoud);   pStyle = apvts.getRawParameterValue (kStyle);
     pCheck = apvts.getRawParameterValue (kCheck); pActive = apvts.getRawParameterValue (kActive);
 }
 
-bool BrettProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool KorrentProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     const auto& out = layouts.getMainOutputChannelSet();
     if (out != juce::AudioChannelSet::mono() && out != juce::AudioChannelSet::stereo()) return false;
     return layouts.getMainInputChannelSet() == out;
 }
 
-void BrettProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void KorrentProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     engine.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
     setLatencySamples (engine.getLatencySamples());
@@ -42,7 +42,7 @@ void BrettProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     bypassDelay.clear(); bypassPos = 0;
 }
 
-void BrettProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void KorrentProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
     for (int ch = getTotalNumInputChannels(); ch < getTotalNumOutputChannels(); ++ch) buffer.clear (ch, 0, buffer.getNumSamples());
@@ -70,9 +70,9 @@ void BrettProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     engine.process (buffer);
 }
 
-juce::AudioProcessorEditor* BrettProcessor::createEditor() { return new BrettEditor (*this); }
+juce::AudioProcessorEditor* KorrentProcessor::createEditor() { return new KorrentEditor (*this); }
 
-void BrettProcessor::getStateInformation (juce::MemoryBlock& destData)
+void KorrentProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     state.setProperty (kCheck, 0, nullptr);
@@ -84,7 +84,7 @@ void BrettProcessor::getStateInformation (juce::MemoryBlock& destData)
     }
 }
 
-void BrettProcessor::setStateInformation (const void* data, int sizeInBytes)
+void KorrentProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     if (auto xml = getXmlFromBinary (data, sizeInBytes))
         if (xml->hasTagName (apvts.state.getType()))
@@ -94,4 +94,4 @@ void BrettProcessor::setStateInformation (const void* data, int sizeInBytes)
         }
 }
 
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new BrettProcessor(); }
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter() { return new KorrentProcessor(); }

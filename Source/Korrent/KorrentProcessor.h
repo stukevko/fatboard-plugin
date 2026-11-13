@@ -1,12 +1,12 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "BrettEngine.h"
+#include "KorrentEngine.h"
 
-class BrettProcessor : public juce::AudioProcessor
+class KorrentProcessor : public juce::AudioProcessor
 {
 public:
-    BrettProcessor();
-    ~BrettProcessor() override = default;
+    KorrentProcessor();
+    ~KorrentProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
@@ -32,7 +32,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
-    const BrettEngine& getEngine() const { return engine; }
+    const KorrentEngine& getEngine() const { return engine; }
     /** Forget the loudest part heard so far (e.g. after big mix changes). */
     void relearn() { relearnFlag.store (true); }
 
@@ -42,10 +42,10 @@ public:
     static constexpr const char* kActive = "active";
 
 private:
-    BrettEngine engine;
+    KorrentEngine engine;
     std::atomic<float>* pLoud = nullptr; std::atomic<float>* pStyle = nullptr; std::atomic<float>* pCheck = nullptr; std::atomic<float>* pActive = nullptr;
     std::atomic<bool> relearnFlag { false };
     juce::AudioBuffer<float> bypassDelay; int bypassPos = 0;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BrettProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (KorrentProcessor)
 };

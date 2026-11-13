@@ -1,4 +1,4 @@
-// Brett (master) offline check.
+// Korrent (master) offline check.
 //  mix = 808 (50 Hz, decaying, on every beat) + kick click + mids + hats, a quiet verse then a loud hook, exported quiet (~-22 LUFS)
 //  - loudness lands near the target of the knob, for each style
 //  - verse and hook keep their distance (one gain, no riding)
@@ -7,7 +7,7 @@
 //  - CHECK changes the sound when listening and is OFF while rendering
 //  - abuse → finite
 #include <juce_dsp/juce_dsp.h>
-#include "BrettEngine.h"
+#include "KorrentEngine.h"
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
@@ -45,7 +45,7 @@ static juce::AudioBuffer<float> makeMix (int seconds)
     return b;
 }
 
-static void run (BrettEngine& e, juce::AudioBuffer<float>& buf, float loud, int style, int check, bool rendering, int block = 512)
+static void run (KorrentEngine& e, juce::AudioBuffer<float>& buf, float loud, int style, int check, bool rendering, int block = 512)
 {
     for (int pos = 0; pos < buf.getNumSamples(); pos += block)
     {
@@ -55,7 +55,7 @@ static void run (BrettEngine& e, juce::AudioBuffer<float>& buf, float loud, int 
     }
 }
 
-// optional: BrettTest in.f32 out.f32 <knob> <style>  → raw 48k stereo float file, played twice (learn, then judge)
+// optional: KorrentTest in.f32 out.f32 <knob> <style>  → raw 48k stereo float file, played twice (learn, then judge)
 static int runFile (const char* inPath, const char* outPath, float knob, int style)
 {
     FILE* f = std::fopen (inPath, "rb"); if (! f) return 1;
@@ -64,7 +64,7 @@ static int runFile (const char* inPath, const char* outPath, float knob, int sty
     std::vector<float> raw ((size_t) total * 2); if (std::fread (raw.data(), 4, raw.size(), f) != raw.size()) return 1; std::fclose (f);
     juce::AudioBuffer<float> in (2, total);
     for (int i = 0; i < total; ++i) { in.setSample (0, i, raw[(size_t) i * 2]); in.setSample (1, i, raw[(size_t) i * 2 + 1]); }
-    BrettEngine e; e.prepare (sr, 512, 2);
+    KorrentEngine e; e.prepare (sr, 512, 2);
     juce::AudioBuffer<float> a; a.makeCopyOf (in); run (e, a, knob, style, 0, false);
     juce::AudioBuffer<float> out; out.makeCopyOf (in); run (e, out, knob, style, 0, true);
     float peak = 0; for (int i = 0; i < total; ++i) for (int ch = 0; ch < 2; ++ch) peak = juce::jmax (peak, std::abs (out.getSample (ch, i)));
@@ -87,7 +87,7 @@ int main (int argc, char** argv)
     for (int style = 0; style < 3; ++style)
         for (float loud : { 0.4f, 0.7f, 1.0f })
         {
-            BrettEngine e; e.prepare (sr, 512, 2);
+            KorrentEngine e; e.prepare (sr, 512, 2);
             juce::AudioBuffer<float> a; a.makeCopyOf (in); run (e, a, loud, style, 0, false);
             juce::AudioBuffer<float> out; out.makeCopyOf (in); run (e, out, loud, style, 0, true);
             const float target = e.settings.targetMinLufs + (e.settings.targetMaxLufs - e.settings.targetMinLufs) * loud;
@@ -103,7 +103,7 @@ int main (int argc, char** argv)
 
     // 808 shape: a 50 Hz tone pushed 8 dB over the ceiling
     {
-        BrettEngine e; e.prepare (sr, 512, 2);
+        KorrentEngine e; e.prepare (sr, 512, 2);
         const int total = (int) sr * 4; juce::AudioBuffer<float> b (2, total);
         for (int i = 0; i < total; ++i) { const float s = 0.9f * (float) std::sin (2 * juce::MathConstants<double>::pi * 50.0 * i / sr); b.setSample (0, i, s); b.setSample (1, i, s); }
         // force gain: quiet copy first is not needed – drive it via the knob on an already hot signal
@@ -117,7 +117,7 @@ int main (int argc, char** argv)
     {
         for (int c = 1; c <= 3; ++c)
         {
-            BrettEngine e1, e2, e3; e1.prepare (sr, 512, 2); e2.prepare (sr, 512, 2); e3.prepare (sr, 512, 2);
+            KorrentEngine e1, e2, e3; e1.prepare (sr, 512, 2); e2.prepare (sr, 512, 2); e3.prepare (sr, 512, 2);
             juce::AudioBuffer<float> ref, live, rend; ref.makeCopyOf (in); live.makeCopyOf (in); rend.makeCopyOf (in);
             run (e1, ref, 0.7f, 1, 0, false); run (e2, live, 0.7f, 1, c, false); run (e3, rend, 0.7f, 1, c, true);
             double dl = 0, dr = 0, rp = 0; for (int i = h0; i < h1; ++i) { const double a = live.getSample (0, i) - ref.getSample (0, i), b2 = rend.getSample (0, i) - ref.getSample (0, i); dl += a * a; dr += b2 * b2; rp += (double) ref.getSample (0, i) * ref.getSample (0, i); }
@@ -129,7 +129,7 @@ int main (int argc, char** argv)
 
     // abuse
     {
-        BrettEngine e; e.prepare (sr, 1024, 2); juce::Random r (2); float peak = 0; bool bad = false;
+        KorrentEngine e; e.prepare (sr, 1024, 2); juce::Random r (2); float peak = 0; bool bad = false;
         for (int rep = 0; rep < 1500; ++rep)
         {
             const int n = 1 + r.nextInt (1000); juce::AudioBuffer<float> b (2, n); const int kind = (rep / 70) % 4;

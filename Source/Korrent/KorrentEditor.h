@@ -1,6 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "BrettProcessor.h"
+#include "KorrentProcessor.h"
 #include "FatboardLookAndFeel.h"
 #include "FatboardWidgets.h"
 
@@ -36,21 +36,21 @@ private:
     float value = -100.0f; bool on = false;
 };
 
-class BrettEditor : public juce::AudioProcessorEditor, private juce::Timer
+class KorrentEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
-    explicit BrettEditor (BrettProcessor&);
-    ~BrettEditor() override;
+    explicit KorrentEditor (KorrentProcessor&);
+    ~KorrentEditor() override;
     void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
     void timerCallback() override;
 
-    BrettProcessor& proc;
+    KorrentProcessor& proc;
     FatboardLookAndFeel lnf { FatboardColours::ice };
 
-    FatboardHeader header { "Brett" };
+    FatboardHeader header { "Korrent" };
     BigKnob loudKnob { "Loud" };
     LoudnessBar bar;
     std::unique_ptr<PillGroup> style, check;
@@ -62,5 +62,5 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> activeAtt;
     bool checkOn = false, heard = false;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BrettEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (KorrentEditor)
 };
