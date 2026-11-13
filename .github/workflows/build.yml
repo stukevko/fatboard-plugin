@@ -67,7 +67,7 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Release -DFATBOARD_LTO=$LTO
 
       - name: Build
-        run: cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Spit_All Smash_All Korrent_All --parallel
+        run: cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Spit_All Smash_All Korrent_All Thump_All --parallel
 
       # ---------------- Windows: stage, zip, Inno Setup installer ----------------
       - name: Stage (Windows)
@@ -75,7 +75,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path out | Out-Null
-          foreach ($t in "Scrub","ScrubPro","Harun","Spit","Smash","Korrent") {
+          foreach ($t in "Scrub","ScrubPro","Harun","Spit","Smash","Korrent","Thump") {
             Copy-Item -Recurse "build/${t}_artefacts/Release/VST3/*" out/
             Copy-Item -Recurse "build/${t}_artefacts/Release/Standalone/*" out/
           }
@@ -93,7 +93,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p out
-          for t in Scrub ScrubPro Harun Spit Smash Korrent; do
+          for t in Scrub ScrubPro Harun Spit Smash Korrent Thump; do
             cp -R build/${t}_artefacts/Release/VST3/* out/
             cp -R build/${t}_artefacts/Release/AU/* out/
             cp -R build/${t}_artefacts/Release/Standalone/* out/
@@ -110,6 +110,7 @@ jobs:
           (cd out && zip -qr ../Fatboard-spit-mac.zip "Spit.vst3" "Spit.component")
           (cd out && zip -qr ../Fatboard-smash-mac.zip "Smash.vst3" "Smash.component")
           (cd out && zip -qr ../Fatboard-korrent-mac.zip "Korrent.vst3" "Korrent.component")
+          (cd out && zip -qr ../Fatboard-thump-mac.zip "Thump.vst3" "Thump.component")
           (cd out && zip -qr "../Fatboard-macOS-${{ steps.v.outputs.version }}.zip" .)
           cp "Fatboard-macOS-${{ steps.v.outputs.version }}.zip" Fatboard-all-mac.zip
 
