@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.9.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.10.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -230,6 +230,27 @@ target_sources(Thump PRIVATE
 fatboard_configure(Thump)
 target_include_directories(Thump PRIVATE Source/Thump)
 
+# ---- Sog (reverse reverb: capture, render, drag the swell into the playlist) ------
+juce_add_plugin(Sog
+  PRODUCT_NAME "Sog"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.sog"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fsog
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Reverb
+  AU_MAIN_TYPE kAudioUnitType_Effect)
+target_sources(Sog PRIVATE
+  Source/Sog/SogProcessor.cpp Source/Sog/SogProcessor.h
+  Source/Sog/SogEditor.cpp Source/Sog/SogEditor.h
+  Source/Sog/SogRenderer.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Sog)
+target_include_directories(Sog PRIVATE Source/Sog)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -269,6 +290,12 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(ThumpTest PRIVATE Source/Thump)
   target_compile_definitions(ThumpTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(ThumpTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(SogTest PRODUCT_NAME "SogTest")
+  target_sources(SogTest PRIVATE Tests/SogTest.cpp)
+  target_include_directories(SogTest PRIVATE Source/Sog)
+  target_compile_definitions(SogTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(SogTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(CurveTest PRODUCT_NAME "CurveTest")
   target_sources(CurveTest PRIVATE Tests/CurveTest.cpp)
