@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.7.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.8.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -188,6 +188,27 @@ target_sources(Smash PRIVATE
 fatboard_configure(Smash)
 target_include_directories(Smash PRIVATE Source/Smash)
 
+# ---- Brett (master: loudness, 808-safe clipping, playback check) -----------------
+juce_add_plugin(Brett
+  PRODUCT_NAME "Brett"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.brett"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fbrt
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Mastering
+  AU_MAIN_TYPE kAudioUnitType_Effect)
+target_sources(Brett PRIVATE
+  Source/Brett/BrettProcessor.cpp Source/Brett/BrettProcessor.h
+  Source/Brett/BrettEditor.cpp Source/Brett/BrettEditor.h
+  Source/Brett/BrettEngine.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Brett)
+target_include_directories(Brett PRIVATE Source/Brett)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -215,6 +236,12 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(SmashTest PRIVATE Source/Common Source/Smash)
   target_compile_definitions(SmashTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(SmashTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(BrettTest PRODUCT_NAME "BrettTest")
+  target_sources(BrettTest PRIVATE Tests/BrettTest.cpp)
+  target_include_directories(BrettTest PRIVATE Source/Brett)
+  target_compile_definitions(BrettTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(BrettTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(CurveTest PRODUCT_NAME "CurveTest")
   target_sources(CurveTest PRIVATE Tests/CurveTest.cpp)

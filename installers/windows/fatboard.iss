@@ -59,6 +59,7 @@ Name: "scrubpro"; Description: "Scrub Pro – cleanup + vocal modes";    Types: 
 Name: "harun";    Description: "Harun – double / harmony templates (wide layer, matched EQ, hall + echo)";            Types: full custom
 Name: "spit";     Description: "Spit – beatbox to drum MIDI";               Types: full custom
 Name: "smash";    Description: "Smash – drum bus";                           Types: full custom
+Name: "brett";    Description: "Brett – master (loudness, 808-safe, playback check)"; Types: full custom
 Name: "standalone"; Description: "Standalone apps (test without a DAW)"; Types: full custom
 
 [Files]
@@ -68,12 +69,14 @@ Source: "{#StageDir}\Scrub Pro.vst3\*"; DestDir: "{commoncf64}\VST3\Scrub Pro.vs
 Source: "{#StageDir}\Harun.vst3\*";     DestDir: "{commoncf64}\VST3\Harun.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: harun
 Source: "{#StageDir}\Spit.vst3\*";      DestDir: "{commoncf64}\VST3\Spit.vst3";      Flags: ignoreversion recursesubdirs createallsubdirs; Components: spit
 Source: "{#StageDir}\Smash.vst3\*";     DestDir: "{commoncf64}\VST3\Smash.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: smash
+Source: "{#StageDir}\Brett.vst3\*";     DestDir: "{commoncf64}\VST3\Brett.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: brett
 ; Standalone
 Source: "{#StageDir}\Scrub.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and scrub
 Source: "{#StageDir}\Scrub Pro.exe";    DestDir: "{app}"; Flags: ignoreversion; Components: standalone and scrubpro
 Source: "{#StageDir}\Harun.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and harun
 Source: "{#StageDir}\Spit.exe";         DestDir: "{app}"; Flags: ignoreversion; Components: standalone and spit
 Source: "{#StageDir}\Smash.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and smash
+Source: "{#StageDir}\Brett.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and brett
 
 [Icons]
 Name: "{group}\Scrub";     Filename: "{app}\Scrub.exe";     Components: standalone and scrub
@@ -81,6 +84,7 @@ Name: "{group}\Scrub Pro"; Filename: "{app}\Scrub Pro.exe"; Components: standalo
 Name: "{group}\Harun";     Filename: "{app}\Harun.exe";     Components: standalone and harun
 Name: "{group}\Spit";      Filename: "{app}\Spit.exe";      Components: standalone and spit
 Name: "{group}\Smash";     Filename: "{app}\Smash.exe";     Components: standalone and smash
+Name: "{group}\Brett";     Filename: "{app}\Brett.exe";     Components: standalone and brett
 Name: "{group}\fatboard.com"; Filename: "https://fatboard.com"
 
 [Messages]

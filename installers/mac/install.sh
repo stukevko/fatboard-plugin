@@ -11,13 +11,13 @@
 #   B) straight from the web (once fatboard.com is live)
 #        curl -fsSL https://fatboard.com/mac | sh
 #
-#  Installs Scrub, Scrub Pro, Harun, Spit and Smash (VST3 + AU) into your user
+#  Installs Scrub, Scrub Pro, Harun, Spit, Smash and Brett (VST3 + AU) into your user
 #  Library. No admin password, no Apple developer account needed: the script
 #  removes the download quarantine flag and signs the plugins locally (ad hoc),
 #  so macOS and your DAW load them like your own files.
 #
 #  Options (env vars):
-#    FATBOARD_ONLY=scrub        web mode: one plugin (scrub | scrub-pro | harun | spit | smash)
+#    FATBOARD_ONLY=scrub        web mode: one plugin (scrub | scrub-pro | harun | spit | smash | brett)
 #    FATBOARD_BASE=https://…    web mode: different download host
 #    FATBOARD_SYSTEM=1          install for all users (/Library, needs sudo)
 #
