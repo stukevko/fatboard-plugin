@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.10.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.11.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -209,27 +209,6 @@ target_sources(Korrent PRIVATE
 fatboard_configure(Korrent)
 target_include_directories(Korrent PRIVATE Source/Korrent)
 
-# ---- Thump (instrument: kick + 808 in one, with a clipper) ------------------------
-juce_add_plugin(Thump
-  PRODUCT_NAME "Thump"
-  COMPANY_NAME "Fatboard"
-  BUNDLE_ID "com.fatboard.thump"
-  PLUGIN_MANUFACTURER_CODE Fatb
-  PLUGIN_CODE Fthm
-  FORMATS ${FATBOARD_FORMATS}
-  IS_SYNTH TRUE
-  NEEDS_MIDI_INPUT TRUE
-  COPY_PLUGIN_AFTER_BUILD FALSE
-  VST3_CATEGORIES Instrument Synth
-  AU_MAIN_TYPE kAudioUnitType_MusicDevice)
-target_sources(Thump PRIVATE
-  Source/Thump/ThumpProcessor.cpp Source/Thump/ThumpProcessor.h
-  Source/Thump/ThumpEditor.cpp Source/Thump/ThumpEditor.h
-  Source/Thump/ThumpEngine.h
-  ${FATBOARD_COMMON_SOURCES})
-fatboard_configure(Thump)
-target_include_directories(Thump PRIVATE Source/Thump)
-
 # ---- Sog (reverse reverb: capture, render, drag the swell into the playlist) ------
 juce_add_plugin(Sog
   PRODUCT_NAME "Sog"
@@ -284,12 +263,6 @@ if(FATBOARD_BUILD_TESTS)
   target_include_directories(KorrentTest PRIVATE Source/Korrent)
   target_compile_definitions(KorrentTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(KorrentTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
-
-  juce_add_console_app(ThumpTest PRODUCT_NAME "ThumpTest")
-  target_sources(ThumpTest PRIVATE Tests/ThumpTest.cpp)
-  target_include_directories(ThumpTest PRIVATE Source/Thump)
-  target_compile_definitions(ThumpTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-  target_link_libraries(ThumpTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(SogTest PRODUCT_NAME "SogTest")
   target_sources(SogTest PRIVATE Tests/SogTest.cpp)

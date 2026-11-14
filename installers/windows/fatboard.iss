@@ -60,7 +60,6 @@ Name: "harun";    Description: "Harun – double / harmony templates (wide layer
 Name: "spit";     Description: "Spit – beatbox to drum MIDI";               Types: full custom
 Name: "smash";    Description: "Smash – drum bus";                           Types: full custom
 Name: "korrent";    Description: "Korrent – master (loudness, 808-safe, playback check)"; Types: full custom
-Name: "thump";    Description: "Thump – kick + 808 instrument";                Types: full custom
 Name: "sog";      Description: "Sog – reverse reverb";                         Types: full custom
 Name: "standalone"; Description: "Standalone apps (test without a DAW)"; Types: full custom
 
@@ -72,7 +71,6 @@ Source: "{#StageDir}\Harun.vst3\*";     DestDir: "{commoncf64}\VST3\Harun.vst3";
 Source: "{#StageDir}\Spit.vst3\*";      DestDir: "{commoncf64}\VST3\Spit.vst3";      Flags: ignoreversion recursesubdirs createallsubdirs; Components: spit
 Source: "{#StageDir}\Smash.vst3\*";     DestDir: "{commoncf64}\VST3\Smash.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: smash
 Source: "{#StageDir}\Korrent.vst3\*";     DestDir: "{commoncf64}\VST3\Korrent.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: korrent
-Source: "{#StageDir}\Thump.vst3\*";     DestDir: "{commoncf64}\VST3\Thump.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: thump
 Source: "{#StageDir}\Sog.vst3\*";     DestDir: "{commoncf64}\VST3\Sog.vst3";     Flags: ignoreversion recursesubdirs createallsubdirs; Components: sog
 ; Standalone
 Source: "{#StageDir}\Scrub.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and scrub
@@ -81,7 +79,6 @@ Source: "{#StageDir}\Harun.exe";        DestDir: "{app}"; Flags: ignoreversion; 
 Source: "{#StageDir}\Spit.exe";         DestDir: "{app}"; Flags: ignoreversion; Components: standalone and spit
 Source: "{#StageDir}\Smash.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and smash
 Source: "{#StageDir}\Korrent.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and korrent
-Source: "{#StageDir}\Thump.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and thump
 Source: "{#StageDir}\Sog.exe";        DestDir: "{app}"; Flags: ignoreversion; Components: standalone and sog
 
 [Icons]
@@ -91,7 +88,6 @@ Name: "{group}\Harun";     Filename: "{app}\Harun.exe";     Components: standalo
 Name: "{group}\Spit";      Filename: "{app}\Spit.exe";      Components: standalone and spit
 Name: "{group}\Smash";     Filename: "{app}\Smash.exe";     Components: standalone and smash
 Name: "{group}\Korrent";     Filename: "{app}\Korrent.exe";     Components: standalone and korrent
-Name: "{group}\Thump";     Filename: "{app}\Thump.exe";     Components: standalone and thump
 Name: "{group}\Sog";     Filename: "{app}\Sog.exe";     Components: standalone and sog
 Name: "{group}\fatboard.com"; Filename: "https://fatboard.com"
 
