@@ -13,8 +13,8 @@ namespace FatboardColours
     const juce::Colour ring    { 0xFF222222 };
     const juce::Colour yellow  { 0xFFF5E100 };   // Scrub / brand
     const juce::Colour ember   { 0xFFFF5A1F };   // Harun
-    const juce::Colour ice     { 0xFF4FD8FF };   // Korrent
-    const juce::Colour lime    { 0xFFC8FF00 };   // Spit
+    const juce::Colour ice     { 0xFF4FD8FF };   // free (was Korrent)
+    const juce::Colour lime    { 0xFFC8FF00 };   // free (was Spit)
     const juce::Colour magenta { 0xFFFF3DA6 };   // Smash
     const juce::Colour mint    { 0xFF2EE6A6 };   // Sog (reverse reverb)
     const juce::Colour bone    { 0xFFF3F1EC };

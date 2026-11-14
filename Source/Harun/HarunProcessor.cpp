@@ -45,6 +45,7 @@ bool HarunProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 void HarunProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     engine.prepare (sampleRate, samplesPerBlock, getTotalNumOutputChannels());
+    licenseGate.prepare (sampleRate);
 }
 
 void HarunProcessor::loadTemplate (int index)
@@ -79,6 +80,7 @@ void HarunProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
 
     engine.setParams ((int) pTemplate->load(), pWidth->load(), pLevel->load(), pSpace->load(), (int) pSpaceType->load(), bpm);
     engine.process (buffer);
+    licenseGate.process (buffer, license.isLicensed());
 }
 
 juce::AudioProcessorEditor* HarunProcessor::createEditor() { return new HarunEditor (*this); }

@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "LicenseClient.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include "SogRenderer.h"
 
@@ -34,6 +35,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+    LicenseClient license { "sog", JucePlugin_VersionString };   // plugin <-> fatboard.com account
 
     // ---- UI (message thread) ----
     void arm()                 { state.store (State::Armed); }

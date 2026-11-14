@@ -11,13 +11,13 @@
 #   B) straight from the web (once fatboard.com is live)
 #        curl -fsSL https://fatboard.com/mac | sh
 #
-#  Installs Scrub, Scrub Pro, Harun, Spit, Smash, Korrent and Sog (VST3 + AU) into your user
+#  Installs Scrub, Scrub Pro, Harun, Smash and Sog (VST3 + AU) into your user
 #  Library. No admin password, no Apple developer account needed: the script
 #  removes the download quarantine flag and signs the plugins locally (ad hoc),
 #  so macOS and your DAW load them like your own files.
 #
 #  Options (env vars):
-#    FATBOARD_ONLY=scrub        web mode: one plugin (scrub | scrub-pro | harun | spit | smash | korrent | sog)
+#    FATBOARD_ONLY=scrub        web mode: one plugin (scrub | scrub-pro | harun | smash | sog)
 #    FATBOARD_BASE=https://…    web mode: different download host
 #    FATBOARD_SYSTEM=1          install for all users (/Library, needs sudo)
 #
@@ -113,5 +113,5 @@ say "${W}Done.${N} Restart your DAW and rescan plugins (FL Studio: Options > Man
 say "${G}VST3 → $VST3_DIR${N}"
 say "${G}AU   → $AU_DIR${N}"
 say ""
-say "${Y}Fett. Korrent.${N}"
+say "${Y}Fett. Brett.${N}"
 say ""

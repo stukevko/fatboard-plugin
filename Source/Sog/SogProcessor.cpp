@@ -92,6 +92,7 @@ juce::AudioBuffer<float> SogProcessor::getSwell() const
 
 juce::File SogProcessor::writeWav()
 {
+    if (! license.isLicensed()) return {};          // demo: capture and preview work, the file needs a login
     const auto buf = getSwell();
     if (buf.getNumSamples() < 64) return {};
     auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("Fatboard Sog");

@@ -4,6 +4,7 @@ using namespace FatboardColours;
 SmashEditor::SmashEditor (SmashProcessor& p) : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
+    addChildComponent (licenseBar); licenseBar.setVisible (proc.license.isEnabled());
     for (auto* c : std::initializer_list<juce::Component*> { &header, &smashKnob, &fitKnob, &activity, &footer }) addAndMakeVisible (c);
     styleGroup = std::make_unique<PillGroup> (*proc.apvts.getParameter (SmashProcessor::kStyle), "Style");
     addAndMakeVisible (*styleGroup);
@@ -60,6 +61,7 @@ void SmashEditor::paint (juce::Graphics& g)
 
 void SmashEditor::resized()
 {
+    licenseBar.setBounds (28, 3, getWidth() - 56, 24);
     auto r = getLocalBounds().reduced (28);
     header.setBounds (r.removeFromTop (56)); footer.setBounds (r.removeFromBottom (28));
     r.removeFromTop (74); r.removeFromBottom (24);

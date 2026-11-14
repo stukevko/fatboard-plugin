@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.11.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.12.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,6 +40,25 @@ juce_add_binary_data(FatboardAssets
     Assets/InterMedium.ttf
     Assets/InterSemiBold.ttf)
 
+# ---- Licensing (plugin <-> fatboard.com account) ------------------------------
+# OFF: every plugin is open (development builds, and until the shop is live).
+# ON:  paid plugins run in demo mode until the user logs in. Needs the public key
+#      from `npm run keys` in fatboard-web:
+#      cmake -DFATBOARD_LICENSING=ON -DFATBOARD_LICENSE_PUBKEY=<64 hex chars> [-DFATBOARD_API_URL=https://fatboard.com]
+option(FATBOARD_LICENSING "Paid plugins need a fatboard.com login" OFF)
+set(FATBOARD_LICENSE_PUBKEY "" CACHE STRING "Ed25519 public key (hex) the license tokens are checked against")
+set(FATBOARD_API_URL "https://fatboard.com" CACHE STRING "Where the plugins log in")
+if(FATBOARD_LICENSING AND NOT FATBOARD_LICENSE_PUBKEY MATCHES "^[0-9a-fA-F]+$")
+  message(FATAL_ERROR "FATBOARD_LICENSING=ON needs -DFATBOARD_LICENSE_PUBKEY=<64 hex chars>")
+endif()
+
+# Ed25519 signature check (vendored, zlib license, see ThirdParty/ed25519)
+add_library(fatboard_ed25519 STATIC
+  ThirdParty/ed25519/verify.c ThirdParty/ed25519/ge.c ThirdParty/ed25519/fe.c
+  ThirdParty/ed25519/sc.c ThirdParty/ed25519/sha512.c)
+target_include_directories(fatboard_ed25519 PUBLIC ThirdParty/ed25519)
+set_target_properties(fatboard_ed25519 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 # ---- Shared code -------------------------------------------------------------
 set(FATBOARD_COMMON_SOURCES
   Source/Common/FatboardLookAndFeel.cpp
@@ -47,7 +66,10 @@ set(FATBOARD_COMMON_SOURCES
   Source/Common/FatboardWidgets.h
   Source/Common/CleanupEngine.h
   Source/Common/VoiceCurve.h
-  Source/Common/AirEngine.h)
+  Source/Common/AirEngine.h
+  Source/Common/License/LicenseClient.cpp
+  Source/Common/License/LicenseClient.h
+  Source/Common/License/LicenseBar.h)
 
 set(FATBOARD_FORMATS VST3 Standalone)
 if(APPLE)
@@ -59,8 +81,13 @@ function(fatboard_configure target)
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
-    JUCE_DISPLAY_SPLASH_SCREEN=0)
+    JUCE_DISPLAY_SPLASH_SCREEN=0
+    FATBOARD_LICENSING=$<BOOL:${FATBOARD_LICENSING}>
+    FATBOARD_LICENSE_PUBKEY="${FATBOARD_LICENSE_PUBKEY}"
+    FATBOARD_API_URL="${FATBOARD_API_URL}")
+  target_include_directories(${target} PRIVATE Source/Common/License)
   target_link_libraries(${target} PRIVATE
+    fatboard_ed25519
     FatboardAssets
     juce::juce_audio_utils
     juce::juce_dsp
@@ -142,31 +169,6 @@ target_sources(Harun PRIVATE
 fatboard_configure(Harun)
 target_include_directories(Harun PRIVATE Source/Harun)
 
-# ---- Spit (beatbox → drum MIDI) -----------------------------------------------
-juce_add_plugin(Spit
-  PRODUCT_NAME "Spit"
-  COMPANY_NAME "Fatboard"
-  BUNDLE_ID "com.fatboard.spit"
-  PLUGIN_MANUFACTURER_CODE Fatb
-  PLUGIN_CODE Fspt
-  FORMATS ${FATBOARD_FORMATS}
-  IS_SYNTH FALSE
-  NEEDS_MIDI_INPUT FALSE
-  NEEDS_MIDI_OUTPUT TRUE
-  COPY_PLUGIN_AFTER_BUILD FALSE
-  VST3_CATEGORIES Fx Tools
-  AU_MAIN_TYPE kAudioUnitType_MusicEffect)
-
-target_sources(Spit PRIVATE
-  Source/Spit/SpitProcessor.cpp
-  Source/Spit/SpitProcessor.h
-  Source/Spit/SpitEditor.cpp
-  Source/Spit/SpitEditor.h
-  Source/Spit/SpitEngine.h
-  ${FATBOARD_COMMON_SOURCES})
-fatboard_configure(Spit)
-target_include_directories(Spit PRIVATE Source/Spit)
-
 # ---- Smash (drum bus) ----------------------------------------------------------
 juce_add_plugin(Smash
   PRODUCT_NAME "Smash"
@@ -187,27 +189,6 @@ target_sources(Smash PRIVATE
   ${FATBOARD_COMMON_SOURCES})
 fatboard_configure(Smash)
 target_include_directories(Smash PRIVATE Source/Smash)
-
-# ---- Korrent (master: loudness, 808-safe clipping, playback check) -----------------
-juce_add_plugin(Korrent
-  PRODUCT_NAME "Korrent"
-  COMPANY_NAME "Fatboard"
-  BUNDLE_ID "com.fatboard.korrent"
-  PLUGIN_MANUFACTURER_CODE Fatb
-  PLUGIN_CODE Fkor
-  FORMATS ${FATBOARD_FORMATS}
-  IS_SYNTH FALSE
-  NEEDS_MIDI_INPUT FALSE
-  COPY_PLUGIN_AFTER_BUILD FALSE
-  VST3_CATEGORIES Fx Mastering
-  AU_MAIN_TYPE kAudioUnitType_Effect)
-target_sources(Korrent PRIVATE
-  Source/Korrent/KorrentProcessor.cpp Source/Korrent/KorrentProcessor.h
-  Source/Korrent/KorrentEditor.cpp Source/Korrent/KorrentEditor.h
-  Source/Korrent/KorrentEngine.h
-  ${FATBOARD_COMMON_SOURCES})
-fatboard_configure(Korrent)
-target_include_directories(Korrent PRIVATE Source/Korrent)
 
 # ---- Sog (reverse reverb: capture, render, drag the swell into the playlist) ------
 juce_add_plugin(Sog
@@ -246,23 +227,27 @@ if(FATBOARD_BUILD_TESTS)
   target_compile_definitions(HarunTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(HarunTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
-  juce_add_console_app(SpitTest PRODUCT_NAME "SpitTest")
-  target_sources(SpitTest PRIVATE Tests/SpitTest.cpp)
-  target_include_directories(SpitTest PRIVATE Source/Common Source/Spit)
-  target_compile_definitions(SpitTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-  target_link_libraries(SpitTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
-
   juce_add_console_app(SmashTest PRODUCT_NAME "SmashTest")
   target_sources(SmashTest PRIVATE Tests/SmashTest.cpp)
   target_include_directories(SmashTest PRIVATE Source/Common Source/Smash)
   target_compile_definitions(SmashTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   target_link_libraries(SmashTest PRIVATE juce::juce_dsp juce::juce_audio_formats PUBLIC juce::juce_recommended_config_flags)
 
-  juce_add_console_app(KorrentTest PRODUCT_NAME "KorrentTest")
-  target_sources(KorrentTest PRIVATE Tests/KorrentTest.cpp)
-  target_include_directories(KorrentTest PRIVATE Source/Korrent)
-  target_compile_definitions(KorrentTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
-  target_link_libraries(KorrentTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
+  juce_add_console_app(LicenseTest PRODUCT_NAME "LicenseTest")
+  target_sources(LicenseTest PRIVATE Tests/LicenseTest.cpp Source/Common/License/LicenseClient.cpp)
+  target_include_directories(LicenseTest PRIVATE Source/Common/License)
+  # Linux only: JUCE's built-in socket HTTP garbles a JSON POST body, so the test uses libcurl there.
+  # Windows (WinINet) and macOS (NSURLSession) use the system's HTTP stack.
+  if(UNIX AND NOT APPLE)
+    find_package(CURL QUIET)
+  endif()
+  if(CURL_FOUND)
+    target_compile_definitions(LicenseTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=1)
+    target_link_libraries(LicenseTest PRIVATE CURL::libcurl)
+  else()
+    target_compile_definitions(LicenseTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  endif()
+  target_link_libraries(LicenseTest PRIVATE fatboard_ed25519 juce::juce_core juce::juce_events PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(SogTest PRODUCT_NAME "SogTest")
   target_sources(SogTest PRIVATE Tests/SogTest.cpp)

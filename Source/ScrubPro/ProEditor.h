@@ -3,6 +3,7 @@
 #include "ProProcessor.h"
 #include "FatboardLookAndFeel.h"
 #include "FatboardWidgets.h"
+#include "LicenseBar.h"
 
 class ProEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
@@ -21,6 +22,7 @@ private:
     FatboardLookAndFeel lnf;
 
     FatboardHeader header { "Scrub Pro" };
+    LicenseBar licenseBar { proc.license };
     CurveView curveView;
     BigKnob scrubKnob { "Scrub" };
     BigKnob airKnob { "Air" };

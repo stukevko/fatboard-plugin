@@ -3,6 +3,7 @@
 #include "SogProcessor.h"
 #include "FatboardLookAndFeel.h"
 #include "FatboardWidgets.h"
+#include "LicenseBar.h"
 
 /** Shows the rendered swell and is the thing you drag into the playlist. */
 class SwellView : public juce::Component
@@ -31,6 +32,7 @@ private:
     SogProcessor& proc;
     FatboardLookAndFeel lnf { FatboardColours::mint };
     FatboardHeader header { "Sog" };
+    LicenseBar licenseBar { proc.license };
     SwellView view;
     juce::TextButton captureButton { "Capture" }, previewButton { "Preview" }, lowCutButton { "Low cut" };
     std::unique_ptr<PillGroup> length, tremDiv;

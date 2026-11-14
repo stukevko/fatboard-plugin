@@ -3,6 +3,7 @@
 #include "HarunProcessor.h"
 #include "FatboardLookAndFeel.h"
 #include "FatboardWidgets.h"
+#include "LicenseBar.h"
 
 class HarunEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
@@ -21,6 +22,7 @@ private:
     FatboardLookAndFeel lnf { FatboardColours::ember };
 
     FatboardHeader header { "Harun" };
+    LicenseBar licenseBar { proc.license };
     juce::TextButton templateButtons[HarunTemplates::count];
     CurveView curveView;
     BigKnob widthKnob { "Width" };

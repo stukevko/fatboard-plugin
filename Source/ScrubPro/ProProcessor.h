@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "LicenseClient.h"
 #include "CleanupEngine.h"
 #include "VoiceCurve.h"
 #include "AirEngine.h"
@@ -34,6 +35,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+    LicenseClient license { "scrub-pro", JucePlugin_VersionString };   // plugin <-> fatboard.com account
     const CleanupEngine& getEngine() const { return engine; }
     const AirEngine& getAir() const { return air; }
 
@@ -53,6 +55,7 @@ public:
     static constexpr const char* kActive  = "active";
 
 private:
+    LicenseGate licenseGate;
     CleanupEngine engine;
     VoiceCurve curve;
     AirEngine air;

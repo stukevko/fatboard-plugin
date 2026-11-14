@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "LicenseClient.h"
 #include "SmashEngine.h"
 
 class SmashProcessor : public juce::AudioProcessor
@@ -27,12 +28,14 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+    LicenseClient license { "smash", JucePlugin_VersionString };   // plugin <-> fatboard.com account
     const SmashEngine& getEngine() const { return engine; }
     static constexpr const char* kStyle = "style";
     static constexpr const char* kSmash = "smash";
     static constexpr const char* kFit = "fit";
     static constexpr const char* kActive = "active";
 private:
+    LicenseGate licenseGate;
     SmashEngine engine;
     std::atomic<float>* pStyle = nullptr; std::atomic<float>* pSmash = nullptr; std::atomic<float>* pFit = nullptr; std::atomic<float>* pActive = nullptr;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SmashProcessor)

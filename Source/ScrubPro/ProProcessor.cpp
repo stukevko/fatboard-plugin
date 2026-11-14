@@ -56,6 +56,7 @@ void ProProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     const int ch = getMainBusNumOutputChannels();
     engine.prepare (sampleRate, samplesPerBlock, ch);
+    licenseGate.prepare (sampleRate);
     curve.prepare (sampleRate, ch);
     air.prepare (sampleRate, ch);
     engine.setAmount (cleanupParam->load());
@@ -77,6 +78,7 @@ void ProProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuf
     engine.process (main);
     air.process (main, airParam->load());
     curve.processLowPass (main);
+    licenseGate.process (main, license.isLicensed());
 }
 
 juce::AudioProcessorEditor* ProProcessor::createEditor() { return new ProEditor (*this); }

@@ -32,7 +32,7 @@ bool SmashProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
     return sc.isDisabled() || sc == juce::AudioChannelSet::mono() || sc == juce::AudioChannelSet::stereo();
 }
 
-void SmashProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) { engine.prepare (sampleRate, samplesPerBlock, getMainBusNumOutputChannels()); }
+void SmashProcessor::prepareToPlay (double sampleRate, int samplesPerBlock) { engine.prepare (sampleRate, samplesPerBlock, getMainBusNumOutputChannels()); licenseGate.prepare (sampleRate); }
 
 void SmashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
@@ -43,6 +43,7 @@ void SmashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
     if (pActive->load() < 0.5f) return;
     engine.setParams ((SmashEngine::Style) (int) pStyle->load(), pSmash->load(), pFit->load(), scOn);
     engine.process (main, scOn ? &sc : nullptr);
+    licenseGate.process (main, license.isLicensed());
 }
 
 juce::AudioProcessorEditor* SmashProcessor::createEditor() { return new SmashEditor (*this); }

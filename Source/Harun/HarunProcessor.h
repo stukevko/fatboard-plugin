@@ -1,5 +1,6 @@
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "LicenseClient.h"
 #include "HarunEngine.h"
 
 class HarunProcessor : public juce::AudioProcessor
@@ -32,6 +33,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
+    LicenseClient license { "harun", JucePlugin_VersionString };   // plugin <-> fatboard.com account
     const HarunEngine& getEngine() const { return engine; }
 
     /** Writes the template's own Width / Level / Space / Space type into the knobs. */
@@ -45,6 +47,7 @@ public:
     static constexpr const char* kActive    = "active";
 
 private:
+    LicenseGate licenseGate;
     HarunEngine engine;
     std::atomic<float>* pTemplate = nullptr; std::atomic<float>* pWidth = nullptr; std::atomic<float>* pLevel = nullptr;
     std::atomic<float>* pSpace = nullptr; std::atomic<float>* pSpaceType = nullptr; std::atomic<float>* pActive = nullptr;

@@ -60,6 +60,7 @@ void SwellView::mouseDrag (const juce::MouseEvent& e)
 SogEditor::SogEditor (SogProcessor& p) : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
+    addChildComponent (licenseBar); licenseBar.setVisible (proc.license.isEnabled());
     header.power.setVisible (false);                 // the track always passes through
     for (auto* c : std::initializer_list<juce::Component*> { &header, &view, &captureButton, &previewButton, &lowCutButton, &sizeKnob, &toneKnob, &widthKnob, &tremKnob, &levelKnob, &footer })
         addAndMakeVisible (c);
@@ -102,7 +103,7 @@ void SogEditor::timerCallback()
         case SogProcessor::State::Empty:     status = "Press Capture, then play the word or the hit."; break;
         case SogProcessor::State::Armed:     status = "Listening. Play it now."; break;
         case SogProcessor::State::Recording: status = "Got the start, still recording..."; break;
-        case SogProcessor::State::Ready:     status = "Drag this into the playlist. Put its END on the word.   " + juce::String (juce::roundToInt (proc.getBpm())) + " bpm"; break;
+        case SogProcessor::State::Ready:     status = ! proc.license.isLicensed() ? juce::String ("Demo: Preview works. Log in to drag the swell into your project.") : "Drag this into the playlist. Put its END on the word.   " + juce::String (juce::roundToInt (proc.getBpm())) + " bpm"; break;
     }
     view.setStatus (status, proc.getInputLevel());
     captureButton.setButtonText (s == SogProcessor::State::Armed || s == SogProcessor::State::Recording ? "Cancel" : (s == SogProcessor::State::Ready ? "Capture again" : "Capture"));
@@ -134,6 +135,7 @@ void SogEditor::paint (juce::Graphics& g)
 
 void SogEditor::resized()
 {
+    licenseBar.setBounds (28, 3, getWidth() - 56, 24);
     auto r = getLocalBounds().reduced (28);
     header.setBounds (r.removeFromTop (56));
     footer.setBounds (r.removeFromBottom (28));

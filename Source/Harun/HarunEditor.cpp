@@ -13,6 +13,7 @@ HarunEditor::HarunEditor (HarunProcessor& p)
     : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
+    addChildComponent (licenseBar); licenseBar.setVisible (proc.license.isEnabled());
     addAndMakeVisible (header);
     addAndMakeVisible (curveView);
     addAndMakeVisible (widthKnob); addAndMakeVisible (levelKnob); addAndMakeVisible (spaceKnob);
@@ -100,6 +101,7 @@ void HarunEditor::paint (juce::Graphics& g)
 
 void HarunEditor::resized()
 {
+    licenseBar.setBounds (28, 3, getWidth() - 56, 24);
     auto r = getLocalBounds().reduced (28);
     header.setBounds (r.removeFromTop (56));
     footer.setBounds (r.removeFromBottom (28));
