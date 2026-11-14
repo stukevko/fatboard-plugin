@@ -8,15 +8,20 @@ static juce::AudioProcessorValueTreeState::ParameterLayout makeLayout()
         [] (float v, int) { return juce::String (juce::roundToInt (v * 100.0f)) + " %"; });
     auto knob = [&] (const char* id, const char* name, float def)
     { layout.add (std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { id, 1 }, name, juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), def, pct)); };
+    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { SogProcessor::kType, 1 }, "Type",
+        juce::StringArray { "Reverb", "Echo", "Stutter", "Spin" }, 0));
+    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { SogProcessor::kDir, 1 }, "Direction",
+        juce::StringArray { "Before", "After" }, 0));
     layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { SogProcessor::kLength, 1 }, "Length",
         juce::StringArray { "1/4 bar", "1/2 bar", "1 bar", "2 bars" }, 2));
     knob (SogProcessor::kSize, "Size", 0.5f);
     knob (SogProcessor::kTone, "Tone", 0.5f);
     knob (SogProcessor::kWidth, "Width", 0.6f);
     knob (SogProcessor::kTremolo, "Tremolo", 0.6f);
-    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { SogProcessor::kTremDiv, 1 }, "Tremolo Rate",
+    layout.add (std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { SogProcessor::kTremDiv, 1 }, "Rate",
         juce::StringArray { "Off", "1/8", "1/16", "1/32" }, 0));
     layout.add (std::make_unique<juce::AudioParameterBool> (juce::ParameterID { SogProcessor::kLowCut, 1 }, "Low Cut", true));
+    knob (SogProcessor::kDrive, "Drive", 0.0f);
     knob (SogProcessor::kLevel, "Level", 0.7f);
     return layout;
 }
@@ -55,6 +60,9 @@ SogParams SogProcessor::currentParams() const
     p.tremDiv = (int) apvts.getRawParameterValue (kTremDiv)->load();
     p.lowCut = apvts.getRawParameterValue (kLowCut)->load() > 0.5f;
     p.level = apvts.getRawParameterValue (kLevel)->load();
+    p.type = (int) apvts.getRawParameterValue (kType)->load();
+    p.dir = (int) apvts.getRawParameterValue (kDir)->load();
+    p.drive = apvts.getRawParameterValue (kDrive)->load();
     return p;
 }
 
@@ -66,7 +74,8 @@ void SogProcessor::timerCallback()
     if (n < 64) return;
     const auto p = currentParams();
     const juce::String key = juce::String (n) + "|" + juce::String (p.bpm, 2) + "|" + juce::String (p.bars) + "|" + juce::String (p.size, 3) + "|" + juce::String (p.tone, 3) + "|"
-                           + juce::String (p.width, 3) + "|" + juce::String (p.tremolo, 3) + "|" + juce::String (p.tremDiv) + "|" + juce::String ((int) p.lowCut) + "|" + juce::String (p.level, 3);
+                           + juce::String (p.width, 3) + "|" + juce::String (p.tremolo, 3) + "|" + juce::String (p.tremDiv) + "|" + juce::String ((int) p.lowCut) + "|" + juce::String (p.level, 3)
+                           + "|" + juce::String (p.type) + "|" + juce::String (p.dir) + "|" + juce::String (p.drive, 3);
     if (key == lastKey && ! captureFresh.load()) return;
     captureFresh.store (false); lastKey = key;
 
@@ -78,6 +87,7 @@ void SogProcessor::timerCallback()
         if (retired.size() > 6) retired.erase (retired.begin());
         swell = out;
     }
+    clipAfter.store (p.dir == SogRenderer::After); clipReplaces.store (SogRenderer::replacesWord (p));
     swellChanged.store (true);
     renderCount.fetch_add (1);
 }
@@ -98,7 +108,9 @@ juce::File SogProcessor::writeWav()
     auto dir = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("Fatboard Sog");
     dir.createDirectory();
     static const char* len[4] = { "quarter bar", "half bar", "1 bar", "2 bars" };
-    const auto file = dir.getChildFile ("Sog " + juce::String (juce::roundToInt (bpm.load())) + " bpm " + len[juce::jlimit (0, 3, (int) apvts.getRawParameterValue (kLength)->load())]
+    static const char* kind[4] = { "reverb", "echo", "stutter", "spin" };
+    const juce::String what = juce::String (kind[juce::jlimit (0, 3, (int) apvts.getRawParameterValue (kType)->load())]) + (clipAfter.load() ? " after " : " before ");
+    const auto file = dir.getChildFile ("Sog " + what + juce::String (juce::roundToInt (bpm.load())) + " bpm " + len[juce::jlimit (0, 3, (int) apvts.getRawParameterValue (kLength)->load())]
                                          + " " + juce::String (++wavCounter) + ".wav");
     file.deleteFile();
     juce::WavAudioFormat wav;
@@ -165,11 +177,24 @@ void SogProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuf
     if (playPos >= 0 && audioSwell != nullptr && state.load() == State::Ready)
     {
         const int sLen = audioSwell->getNumSamples(), cLen = capturedSamples.load(), skip = preLen;       // the word starts after the pre-roll
+        const bool after = clipAfter.load(), replaces = clipReplaces.load();
         for (int i = 0; i < n; ++i)
         {
-            if (playPos < sLen) { for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, audioSwell->getSample (ch, playPos)); }
-            else if (playPos - sLen + skip < cLen) { for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, capture.getSample (ch, playPos - sLen + skip)); }
-            else { playPos = -1; break; }
+            if (! after)
+            {
+                // Before: the clip, then the word
+                if (playPos < sLen) { for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, audioSwell->getSample (ch, playPos)); }
+                else if (playPos - sLen + skip < cLen) { for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, capture.getSample (ch, playPos - sLen + skip)); }
+                else { playPos = -1; break; }
+            }
+            else
+            {
+                // After: the clip starts with the word (or stands in for it)
+                const bool clipOn = playPos < sLen, wordOn = ! replaces && playPos + skip < cLen;
+                if (! clipOn && ! wordOn) { playPos = -1; break; }
+                if (clipOn) for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, audioSwell->getSample (ch, playPos));
+                if (wordOn) for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, capture.getSample (ch, playPos + skip));
+            }
             ++playPos;
         }
     }

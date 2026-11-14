@@ -10,13 +10,13 @@ class SwellView : public juce::Component
 {
 public:
     std::function<juce::File()> makeFile;
-    void setSwell (const juce::AudioBuffer<float>& b);
+    void setSwell (const juce::AudioBuffer<float>& b, bool startsOnWord = false);
     void setStatus (const juce::String& s, float level) { if (s != status || std::abs (level - meter) > 0.01f) { status = s; meter = level; repaint(); } }
     void paint (juce::Graphics&) override;
     void mouseDrag (const juce::MouseEvent&) override;
     void mouseUp (const juce::MouseEvent&) override { dragStarted = false; }
 private:
-    std::vector<float> peaks; juce::String status; float meter = 0.0f; bool dragStarted = false;
+    std::vector<float> peaks; juce::String status; float meter = 0.0f; bool dragStarted = false, after = false;
 };
 
 class SogEditor : public juce::AudioProcessorEditor, private juce::Timer
@@ -35,14 +35,14 @@ private:
     LicenseBar licenseBar { proc.license };
     SwellView view;
     juce::TextButton captureButton { "Capture" }, previewButton { "Preview" }, lowCutButton { "Low cut" };
-    std::unique_ptr<PillGroup> length, tremDiv;
-    BigKnob sizeKnob { "Size" }, toneKnob { "Tone" }, widthKnob { "Width" }, tremKnob { "Tremolo" }, levelKnob { "Level" };
+    std::unique_ptr<PillGroup> type, dir, length, tremDiv;
+    BigKnob sizeKnob { "Size" }, toneKnob { "Tone" }, widthKnob { "Width" }, tremKnob { "Tremolo" }, driveKnob { "Drive" }, levelKnob { "Level" };
     FatboardFooter footer { JucePlugin_VersionString };
 
     using SliderAtt = juce::AudioProcessorValueTreeState::SliderAttachment;
-    std::unique_ptr<SliderAtt> sizeAtt, toneAtt, widthAtt, tremAtt, levelAtt;
+    std::unique_ptr<SliderAtt> sizeAtt, toneAtt, widthAtt, tremAtt, driveAtt, levelAtt;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowCutAtt;
-    int shownRender = -1; SogProcessor::State shownState = SogProcessor::State::Empty;
+    int shownRender = -1; bool shownAfter = false; SogProcessor::State shownState = SogProcessor::State::Empty;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SogEditor)
 };

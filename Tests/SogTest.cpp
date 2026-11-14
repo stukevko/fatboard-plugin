@@ -1,4 +1,4 @@
-// Sog (reverse reverb) offline check.
+// Sog offline check. First block: the classic reverse reverb (the default). Second block: Echo, Stutter, Spin, After, Drive.
 //  - the swell is exactly Length long at the tempo, for every length
 //  - it rises: the last quarter is far louder than the first, the peak sits at the end
 //  - Size changes the shape (small = late pull), Tone changes brightness, Width the side signal
@@ -88,6 +88,65 @@ int main()
         if (std::abs (pk - 0.445f) > 0.01f) { ++fails; std::printf ("  FAIL: level\n"); }
         juce::AudioBuffer<float> silent (2, 4000); silent.clear(); auto z = SogRenderer::render (silent, sr, base);
         if (z.getMagnitude (0, 0, z.getNumSamples()) != 0.0f) { ++fails; std::printf ("  FAIL: silence in, noise out\n"); }
+    }
+
+    // ---- the other moves, both directions ----
+    {
+        static const char* tn[4] = { "reverb", "echo", "stutter", "spin" };
+        auto zc = [] (const juce::AudioBuffer<float>& b, int a, int z) { int c = 0, used = 0; for (int i = a + 1; i < z; ++i) { const float u = b.getSample (0, i - 1), v = b.getSample (0, i); if (std::abs (u) + std::abs (v) < 1.0e-4f) continue; ++used; if ((u < 0) != (v < 0)) ++c; } return used > 200 ? (double) c / used : 0.0; };
+        for (int dir = 0; dir < 2; ++dir) for (int type = 0; type < 4; ++type) for (float bars : { 0.5f, 2.0f })
+        {
+            SogParams p; p.bpm = 140.0; p.bars = bars; p.type = type; p.dir = dir;
+            auto o = SogRenderer::render (src, sr, p);
+            const int n = o.getNumSamples(), want = (int) std::round (bars * 4 * 60.0 / 140.0 * sr);
+            float pk = 0; bool bad = false;
+            for (int i = 0; i < n; ++i) for (int ch = 0; ch < 2; ++ch) { const float v = o.getSample (ch, i); if (! std::isfinite (v)) bad = true; pk = juce::jmax (pk, std::abs (v)); }
+            const float first = rmsDb (o, 0, n / 4), last = rmsDb (o, n * 3 / 4, n), edge = dir == 0 ? rmsDb (o, 0, 64) : rmsDb (o, n - 64, n);
+            std::printf ("%-7s %-6s %3.1f bar: peak %.2f  first quarter %.1f dB, last quarter %.1f dB, far edge %.1f dB\n", tn[type], dir == 0 ? "before" : "after", bars, pk, first, last, edge);
+            if (n != want || bad || pk > 0.891f || pk < 0.3f) { ++fails; std::printf ("  FAIL: length / finite / level\n"); }
+            if (dir == 0 && ! (last > first + 3.0f)) { ++fails; std::printf ("  FAIL: does not build towards the word\n"); }
+            // a clip shorter than the word still carries the word at its end, so "dies away" only holds for the long one
+            if (dir == 1 && bars > 1.0f && ! (first > last + 3.0f)) { ++fails; std::printf ("  FAIL: does not die away after the word\n"); }
+            if (edge > -45.0f) { ++fails; std::printf ("  FAIL: the far edge of the clip is not silent (click)\n"); }
+        }
+        // Stutter: the same slice every 1/16, so the clip matches itself one slice later
+        {
+            SogParams p; p.bpm = 140.0; p.bars = 1.0f; p.type = SogRenderer::Stutter; p.size = 1.0f;
+            auto o = SogRenderer::render (src, sr, p); const int n = o.getNumSamples(), d = SogRenderer::rateSamples (p, sr, 2);
+            double xy = 0, xx = 0, yy = 0; for (int i = n / 2; i < n - d; ++i) { const double a = o.getSample (0, i), b = o.getSample (0, i + d); xy += a * b; xx += a * a; yy += b * b; }
+            const double corr = xy / std::sqrt (xx * yy + 1e-20);
+            std::printf ("stutter: match with itself one 1/16 later %.2f\n", corr);
+            if (corr < 0.9) { ++fails; std::printf ("  FAIL: slices are not repeats\n"); }
+        }
+        // Echo: Size = more repeats, so more of the clip is filled
+        {
+            SogParams a; a.bpm = 140.0; a.bars = 2.0f; a.type = SogRenderer::Echo; auto b = a; a.size = 0.0f; b.size = 1.0f;
+            auto oa = SogRenderer::render (src, sr, a), ob = SogRenderer::render (src, sr, b); const int n = oa.getNumSamples();
+            const float da = rmsDb (oa, 0, n / 2) - rmsDb (oa, n * 3 / 4, n), db = rmsDb (ob, 0, n / 2) - rmsDb (ob, n * 3 / 4, n);
+            std::printf ("echo: first half vs. end  size 0 %.1f dB, size 100 %.1f dB\n", da, db);
+            if (! (db > da + 6.0f)) { ++fails; std::printf ("  FAIL: Size does not add repeats\n"); }
+        }
+        // Spin: pitch climbs into the word (before), falls after it
+        {
+            SogParams p; p.bpm = 140.0; p.bars = 1.0f; p.type = SogRenderer::Spin; p.tone = 1.0f; p.lowCut = false;
+            auto o = SogRenderer::render (src, sr, p); const int n = o.getNumSamples();
+            const double up0 = zc (o, n / 8, n * 3 / 8), up1 = zc (o, n * 5 / 8, n * 7 / 8);
+            p.dir = SogRenderer::After; auto q = SogRenderer::render (src, sr, p);
+            const double dn0 = zc (q, n / 16, n * 4 / 16), dn1 = zc (q, n * 8 / 16, n * 11 / 16);
+            std::printf ("spin: zero crossings  before %.4f -> %.4f   after %.4f -> %.4f\n", up0, up1, dn0, dn1);
+            if (! (up1 > up0 * 1.5)) { ++fails; std::printf ("  FAIL: spin before does not speed up\n"); }
+            if (! (dn1 < dn0 * 0.75)) { ++fails; std::printf ("  FAIL: spin after does not slow down\n"); }
+        }
+        // Drive: same peak, clearly more body. Drive 0 leaves the clip alone.
+        for (int type = 0; type < 4; ++type)
+        {
+            SogParams a; a.bpm = 140.0; a.bars = 1.0f; a.type = type; auto b = a; b.drive = 1.0f; auto c = a; c.drive = 0.5f;
+            auto oa = SogRenderer::render (src, sr, a), ob = SogRenderer::render (src, sr, b), oc = SogRenderer::render (src, sr, c); const int n = oa.getNumSamples();
+            const float pa = juce::jmax (oa.getMagnitude (0, 0, n), oa.getMagnitude (1, 0, n)), pb = juce::jmax (ob.getMagnitude (0, 0, n), ob.getMagnitude (1, 0, n));
+            const float gain = rmsDb (ob, 0, n) - rmsDb (oa, 0, n), half = rmsDb (oc, 0, n) - rmsDb (oa, 0, n);
+            std::printf ("drive on %-7s: body +%.1f dB at 50 %%, +%.1f dB at 100 %%  (peak %.2f -> %.2f)\n", tn[type], half, gain, pa, pb);
+            if (! (gain > 2.0f && half > 0.5f && half < gain) || pb > 0.891f) { ++fails; std::printf ("  FAIL: Drive\n"); }
+        }
     }
     std::printf (fails == 0 ? "\nALL OK\n" : "\n%d FAILED\n", fails);
     return fails;

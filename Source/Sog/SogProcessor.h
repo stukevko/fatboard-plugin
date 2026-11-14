@@ -5,7 +5,7 @@
 #include "SogRenderer.h"
 
 /** Passes the track through untouched. On Capture it waits for the next sound, grabs it,
-    renders the reverse swell and can play it back (Preview) or hand it over as a WAV. */
+    renders the clip (reverse swell, echo, stutter or spin) and can play it back (Preview) or hand it over as a WAV. */
 class SogProcessor : public juce::AudioProcessor, private juce::Timer
 {
 public:
@@ -45,6 +45,8 @@ public:
     double getBpm() const      { return bpm.load(); }
     float getInputLevel() const { return inLevel.load(); }
     int  getRenderCount() const { return renderCount.load(); }
+    bool isAfter() const       { return clipAfter.load(); }
+    bool replacesWord() const  { return clipReplaces.load(); }
     /** A copy of the current swell (empty if nothing captured yet). */
     juce::AudioBuffer<float> getSwell() const;
     /** Writes the swell as a 24-bit WAV into the temp folder and returns it (invalid file if nothing to write). */
@@ -58,6 +60,9 @@ public:
     static constexpr const char* kTremDiv = "tremDiv";
     static constexpr const char* kLowCut  = "lowCut";
     static constexpr const char* kLevel   = "level";
+    static constexpr const char* kType    = "type";
+    static constexpr const char* kDir     = "dir";
+    static constexpr const char* kDrive   = "drive";
 
     // TUNE
     static constexpr float startThreshold = 0.02f;      // -34 dB: louder than this = "the sound started"
@@ -86,6 +91,7 @@ private:
     std::vector<std::shared_ptr<const juce::AudioBuffer<float>>> retired;
     std::atomic<bool> swellChanged { false };
     std::atomic<int> previewPos { -1 }, renderCount { 0 };
+    std::atomic<bool> clipAfter { false }, clipReplaces { false };      // how the current clip sits against the word
     int playPos = -1;
     juce::String lastKey;
     int wavCounter = 0;
