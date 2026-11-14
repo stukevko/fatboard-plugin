@@ -35,7 +35,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
-    LicenseClient license { "sog", JucePlugin_VersionString };   // plugin <-> fatboard.com account
+    LicenseClient license { "sog", JucePlugin_VersionString };   // plugin <-> fat-board.com account
 
     // ---- UI (message thread) ----
     void arm()                 { state.store (State::Armed); }

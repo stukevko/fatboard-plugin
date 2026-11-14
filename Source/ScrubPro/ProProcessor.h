@@ -35,7 +35,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
-    LicenseClient license { "scrub-pro", JucePlugin_VersionString };   // plugin <-> fatboard.com account
+    LicenseClient license { "scrub-pro", JucePlugin_VersionString };   // plugin <-> fat-board.com account
     const CleanupEngine& getEngine() const { return engine; }
     const AirEngine& getAir() const { return air; }
 

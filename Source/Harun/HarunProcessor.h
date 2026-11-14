@@ -33,7 +33,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
-    LicenseClient license { "harun", JucePlugin_VersionString };   // plugin <-> fatboard.com account
+    LicenseClient license { "harun", JucePlugin_VersionString };   // plugin <-> fat-board.com account
     const HarunEngine& getEngine() const { return engine; }
 
     /** Writes the template's own Width / Level / Space / Space type into the knobs. */

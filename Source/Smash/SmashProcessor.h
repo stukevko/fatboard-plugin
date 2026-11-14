@@ -28,7 +28,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState apvts;
-    LicenseClient license { "smash", JucePlugin_VersionString };   // plugin <-> fatboard.com account
+    LicenseClient license { "smash", JucePlugin_VersionString };   // plugin <-> fat-board.com account
     const SmashEngine& getEngine() const { return engine; }
     static constexpr const char* kStyle = "style";
     static constexpr const char* kSmash = "smash";

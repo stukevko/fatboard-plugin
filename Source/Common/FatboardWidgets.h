@@ -197,7 +197,7 @@ public:
         g.drawText ("FETT. BRETT.", r, juce::Justification::centredLeft, false);
         g.setColour (grey);
         g.setFont (FatboardLookAndFeel::body (11.0f));
-        g.drawText (juce::String (juce::CharPointer_UTF8 ("fatboard.com  \xc2\xb7  v")) + version, r, juce::Justification::centredRight, false);
+        g.drawText (juce::String (juce::CharPointer_UTF8 ("fat-board.com  \xc2\xb7  v")) + version, r, juce::Justification::centredRight, false);
     }
 
 private:

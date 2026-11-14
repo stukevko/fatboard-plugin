@@ -16,8 +16,8 @@ AppName=Fatboard Plugins
 AppVersion={#Version}
 AppVerName=Fatboard Plugins {#Version}
 AppPublisher=Fatboard
-AppPublisherURL=https://fatboard.com
-AppSupportURL=https://fatboard.com
+AppPublisherURL=https://fat-board.com
+AppSupportURL=https://fat-board.com
 DefaultDirName={autopf}\Fatboard
 DefaultGroupName=Fatboard
 DisableProgramGroupPage=yes
@@ -81,7 +81,7 @@ Name: "{group}\Scrub Pro"; Filename: "{app}\Scrub Pro.exe"; Components: standalo
 Name: "{group}\Harun";     Filename: "{app}\Harun.exe";     Components: standalone and harun
 Name: "{group}\Smash";     Filename: "{app}\Smash.exe";     Components: standalone and smash
 Name: "{group}\Sog";     Filename: "{app}\Sog.exe";     Components: standalone and sog
-Name: "{group}\fatboard.com"; Filename: "https://fatboard.com"
+Name: "{group}\fat-board.com"; Filename: "https://fat-board.com"
 
 [Messages]
 WelcomeLabel1=Thin in. Fat out.

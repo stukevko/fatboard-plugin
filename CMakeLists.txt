@@ -40,14 +40,14 @@ juce_add_binary_data(FatboardAssets
     Assets/InterMedium.ttf
     Assets/InterSemiBold.ttf)
 
-# ---- Licensing (plugin <-> fatboard.com account) ------------------------------
+# ---- Licensing (plugin <-> fat-board.com account) ------------------------------
 # OFF: every plugin is open (development builds, and until the shop is live).
 # ON:  paid plugins run in demo mode until the user logs in. Needs the public key
 #      from `npm run keys` in fatboard-web:
-#      cmake -DFATBOARD_LICENSING=ON -DFATBOARD_LICENSE_PUBKEY=<64 hex chars> [-DFATBOARD_API_URL=https://fatboard.com]
-option(FATBOARD_LICENSING "Paid plugins need a fatboard.com login" OFF)
+#      cmake -DFATBOARD_LICENSING=ON -DFATBOARD_LICENSE_PUBKEY=<64 hex chars> [-DFATBOARD_API_URL=https://fat-board.com]
+option(FATBOARD_LICENSING "Paid plugins need a fat-board.com login" OFF)
 set(FATBOARD_LICENSE_PUBKEY "" CACHE STRING "Ed25519 public key (hex) the license tokens are checked against")
-set(FATBOARD_API_URL "https://fatboard.com" CACHE STRING "Where the plugins log in")
+set(FATBOARD_API_URL "https://fat-board.com" CACHE STRING "Where the plugins log in")
 if(FATBOARD_LICENSING AND NOT FATBOARD_LICENSE_PUBKEY MATCHES "^[0-9a-fA-F]+$")
   message(FATAL_ERROR "FATBOARD_LICENSING=ON needs -DFATBOARD_LICENSE_PUBKEY=<64 hex chars>")
 endif()

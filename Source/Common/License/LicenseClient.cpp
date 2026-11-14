@@ -191,7 +191,7 @@ void LicenseClient::doLogin()
     const auto start = post ("/api/device/start", juce::var (body), code);
     if (code != 200 || ! start.isObject())
     {
-        setStatus (State::Demo, {}, {}, code == 0 ? "Can't reach fatboard.com. Check your internet." : "Login is not available right now (" + juce::String (code) + ").");
+        setStatus (State::Demo, {}, {}, code == 0 ? "Can't reach fat-board.com. Check your internet." : "Login is not available right now (" + juce::String (code) + ").");
         return;
     }
     const auto deviceCode = start["deviceCode"].toString(), userCode = start["userCode"].toString(), verifyUrl = start["verifyUrl"].toString();

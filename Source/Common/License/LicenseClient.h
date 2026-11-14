@@ -6,11 +6,11 @@
 // ============================================================================
 //  Fatboard – license client   (plugin ↔ account)
 //
-//  A paid plugin is tied to the buyer's fatboard.com account, not to a serial:
+//  A paid plugin is tied to the buyer's fat-board.com account, not to a serial:
 //
 //    "Log in" in the plugin
 //       → POST /api/device/start   (product, this machine)   ← short code + secret
-//       → the browser opens fatboard.com/activate?code=…     (the user confirms, logged in)
+//       → the browser opens fat-board.com/activate?code=…     (the user confirms, logged in)
 //       → POST /api/device/poll    until approved            ← signed license token
 //       → token saved in the user's app-data folder
 //
@@ -22,7 +22,7 @@
 //  Build switches (CMake → compile definitions):
 //    FATBOARD_LICENSING=0|1        0 = every plugin is open (development builds)
 //    FATBOARD_LICENSE_PUBKEY="…"   raw public key, 64 hex chars (`npm run keys` in fatboard-web)
-//    FATBOARD_API_URL="https://fatboard.com"
+//    FATBOARD_API_URL="https://fat-board.com"
 //  Runtime override for testing: environment variable FATBOARD_API.
 //
 //  Thread-safety: isLicensed() is a lock-free atomic read, safe on the audio thread.
@@ -35,7 +35,7 @@
  #define FATBOARD_LICENSE_PUBKEY ""
 #endif
 #ifndef FATBOARD_API_URL
- #define FATBOARD_API_URL "https://fatboard.com"
+ #define FATBOARD_API_URL "https://fat-board.com"
 #endif
 
 struct LicenseConfig

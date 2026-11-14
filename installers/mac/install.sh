@@ -8,8 +8,8 @@
 #        unzip Fatboard-macOS-x.y.z.zip, open Terminal, type "sh " (with the
 #        space), drag install.sh from that folder into the window, press Enter.
 #
-#   B) straight from the web (once fatboard.com is live)
-#        curl -fsSL https://fatboard.com/mac | sh
+#   B) straight from the web (once fat-board.com is live)
+#        curl -fsSL https://fat-board.com/mac | sh
 #
 #  Installs Scrub, Scrub Pro, Harun, Smash and Sog (VST3 + AU) into your user
 #  Library. No admin password, no Apple developer account needed: the script
@@ -25,7 +25,7 @@
 # ---------------------------------------------------------------------------
 set -e
 
-BASE="${FATBOARD_BASE:-https://fatboard.com}"
+BASE="${FATBOARD_BASE:-https://fat-board.com}"
 ONLY="${FATBOARD_ONLY:-all}"
 
 Y='\033[1;33m'; W='\033[1;37m'; G='\033[0;90m'; R='\033[0;31m'; N='\033[0m'
@@ -38,7 +38,7 @@ say "${Y}  ▬▬▬▬▬${N}   ${W}FATBOARD${N}"
 say "${Y}  ▬▬▬▬▬▬${N}  ${G}Thin in. Fat out.${N}"
 say ""
 
-[ "$(uname)" = "Darwin" ] || die "This installer is for macOS. Windows: download the setup .exe from fatboard.com"
+[ "$(uname)" = "Darwin" ] || die "This installer is for macOS. Windows: download the setup .exe from fat-board.com"
 if [ "${FATBOARD_SYSTEM:-0}" = "1" ]; then
   VST3_DIR="/Library/Audio/Plug-Ins/VST3"; AU_DIR="/Library/Audio/Plug-Ins/Components"; SUDO="sudo"
 else
