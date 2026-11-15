@@ -112,6 +112,37 @@ jobs:
           (cd out && zip -qr "../Fatboard-macOS-${{ steps.v.outputs.version }}.zip" .)
           cp "Fatboard-macOS-${{ steps.v.outputs.version }}.zip" Fatboard-all-mac.zip
 
+      # ---------------- Dig: private tool, never part of a release ----------------
+      - name: Build Dig (private)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: cmake --build build --config Release --target Dig_All --parallel
+
+      - name: Stage Dig (Windows)
+        if: ${{ runner.os == 'Windows' && !startsWith(github.ref, 'refs/tags/v') }}
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dig | Out-Null
+          Copy-Item -Recurse "build/Dig_artefacts/Release/VST3/*" dig/
+          Copy-Item -Recurse "build/Dig_artefacts/Release/Standalone/*" dig/
+          Compress-Archive -Path dig/* -DestinationPath "Private-Dig-Windows.zip"
+
+      - name: Stage Dig (macOS)
+        if: ${{ runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/v') }}
+        run: |
+          mkdir -p dig
+          cp -R build/Dig_artefacts/Release/VST3/* dig/
+          cp -R build/Dig_artefacts/Release/AU/* dig/
+          for b in dig/*.vst3 dig/*.component; do codesign --force --deep --sign - "$b"; done
+          cp installers/mac/install-dig.sh dig/install-dig.sh
+          (cd dig && zip -qr ../Private-Dig-macOS.zip .)
+
+      - name: Upload Dig (private)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Private-Dig-${{ matrix.name }}
+          path: Private-Dig-*.zip
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:

@@ -211,6 +211,28 @@ target_sources(Sog PRIVATE
 fatboard_configure(Sog)
 target_include_directories(Sog PRIVATE Source/Sog)
 
+# ---- Dig (PRIVATE tool, not a product: sample an old song – tempo, key, loop, chops) ----
+juce_add_plugin(Dig
+  PRODUCT_NAME "Dig"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.dig"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fdig
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH TRUE
+  NEEDS_MIDI_INPUT TRUE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Instrument Sampler
+  AU_MAIN_TYPE kAudioUnitType_MusicDevice)
+target_sources(Dig PRIVATE
+  Source/Dig/DigProcessor.cpp Source/Dig/DigProcessor.h
+  Source/Dig/DigEditor.cpp Source/Dig/DigEditor.h
+  Source/Dig/DigAnalysis.h Source/Dig/DigRender.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Dig)
+target_compile_definitions(Dig PUBLIC JUCE_USE_MP3AUDIOFORMAT=1)
+target_include_directories(Dig PRIVATE Source/Dig)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
@@ -248,6 +270,12 @@ if(FATBOARD_BUILD_TESTS)
     target_compile_definitions(LicenseTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   endif()
   target_link_libraries(LicenseTest PRIVATE fatboard_ed25519 juce::juce_core juce::juce_events PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(DigTest PRODUCT_NAME "DigTest")
+  target_sources(DigTest PRIVATE Tests/DigTest.cpp)
+  target_include_directories(DigTest PRIVATE Source/Dig)
+  target_compile_definitions(DigTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(DigTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(SogTest PRODUCT_NAME "SogTest")
   target_sources(SogTest PRIVATE Tests/SogTest.cpp)
