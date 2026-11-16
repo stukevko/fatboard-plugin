@@ -31,7 +31,14 @@ DigProcessor::DigProcessor()
 
 DigProcessor::~DigProcessor() { stopTimer(); stopThread (8000); }
 
-void DigProcessor::prepareToPlay (double sampleRate, int) { sr = sampleRate; lastKey.clear(); for (auto& v : voices) v.on = false; }
+void DigProcessor::prepareToPlay (double sampleRate, int)
+{
+    // A host calls this before every export. The clip must be ready at the new sample rate BEFORE the first block,
+    // otherwise the export starts with the old clip and jumps when the new one arrives (that was the hiccup).
+    sr = sampleRate;
+    for (auto& v : voices) v.on = false;
+    renderIfNeeded();
+}
 
 // ---------------------------------------------------------------- loading (own thread)
 void DigProcessor::loadFile (const juce::File& f, bool keepSettings)
@@ -135,9 +142,13 @@ DigProcessor::Info DigProcessor::getInfo() const
     return i;
 }
 
-// message thread: render again whenever the song, the region, a setting or the project tempo changed
-void DigProcessor::timerCallback()
+void DigProcessor::timerCallback() { renderIfNeeded(); }
+
+// render again whenever the song, the region, a setting, the sample rate or the project tempo changed
+// (message thread from the timer, or the host's thread from prepareToPlay)
+void DigProcessor::renderIfNeeded()
 {
+    const juce::ScopedLock rl (renderLock);
     if (state.load() != State::Ready) return;
     const auto s = getSong(); if (s == nullptr) return;
     Dig::RenderSettings rs;
@@ -215,17 +226,27 @@ void DigProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuf
     buffer.clear();
     if (auto* ph = getPlayHead()) if (auto pos = ph->getPosition()) if (auto b = pos->getBpm()) if (*b > 20.0) hostBpm.store (*b);
 
+    if (isNonRealtime()) renderIfNeeded();      // export: a tempo or setting change is rendered right here, not a moment later
     if (clipChanged.load())
     {
-        const juce::SpinLock::ScopedTryLockType l (clipLock);
-        if (l.isLocked()) { audioClip = clip; clipChanged.store (false); for (auto& v : voices) v.on = false; loopPos = 0; }
+        // exporting is not real time: wait for the clip instead of playing a block with the old one
+        if (isNonRealtime()) clipLock.enter();
+        const bool got = isNonRealtime() || clipLock.tryEnter();
+        struct Leave { juce::SpinLock& l; bool on; ~Leave() { if (on) l.exit(); } } leave { clipLock, got };
+        if (got)
+        {
+            // same length and same cuts (only tone or level changed): notes keep playing. Otherwise they would point into the wrong place.
+            const bool same = audioClip != nullptr && clip != nullptr && audioClip->audio.getNumSamples() == clip->audio.getNumSamples() && audioClip->slices == clip->slices;
+            audioClip = clip; clipChanged.store (false);
+            if (! same) { for (auto& v : voices) v.on = false; loopPos = 0; }
+        }
     }
     const int lr = loopReq.exchange (-1);
     if (lr >= 0) { looping.store (lr == 1); loopPos = 0; }
     if (audioClip == nullptr || audioClip->audio.getNumSamples() < 64) { midi.clear(); return; }
     const auto& a = audioClip->audio; const int len = a.getNumSamples();
     const bool gate = apvts.getRawParameterValue (kGate)->load() > 0.5f;
-    const int fadeOut = juce::jmax (8, (int) (0.003 * sr)), fadeIn = juce::jmax (4, (int) (0.001 * sr)), rel = juce::jmax (8, (int) (0.010 * sr));
+    const int fadeOut = juce::jmax (8, (int) (0.003 * sr)), fadeIn = fadeOut, rel = juce::jmax (8, (int) (0.010 * sr));
 
     const int aud = auditionReq.exchange (-1);
     if (aud >= 0) startVoice (aud, 1.0f, 0, -1);
@@ -248,10 +269,11 @@ void DigProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuf
         for (int i = 0; i < n; ++i)
         {
             if (v.delay > 0) { --v.delay; continue; }
-            if (v.pos >= v.end || v.pos >= len) { v.on = false; break; }
+            // a chop rings a few ms past its cut while the next one fades in: played back to back there is no hole
+            if (v.pos >= v.end + fadeOut || v.pos >= len) { v.on = false; break; }
             float g = v.gain;
-            if (v.pos - start < fadeIn) g *= (float) (v.pos - start) / (float) fadeIn;
-            if (v.end - v.pos < fadeOut) g *= (float) (v.end - v.pos) / (float) fadeOut;
+            if (v.pos - start < fadeIn && start > 0) g *= (float) (v.pos - start) / (float) fadeIn;
+            if (v.pos >= v.end) g *= (float) (v.end + fadeOut - v.pos) / (float) fadeOut;
             if (v.release >= 0) { g *= (float) v.release / (float) rel; if (--v.release <= 0) { v.on = false; break; } }
             for (int ch = 0; ch < nCh; ++ch) buffer.addSample (ch, i, a.getSample (ch, v.pos) * g);
             ++v.pos;

@@ -80,6 +80,8 @@ public:
 
 private:
     void timerCallback() override;
+    void renderIfNeeded();
+    juce::CriticalSection renderLock;
     void run() override;
     int beatsNow() const;
     double startSecNow() const;

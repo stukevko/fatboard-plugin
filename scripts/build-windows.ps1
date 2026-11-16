@@ -7,11 +7,11 @@ Set-Location (Split-Path $PSScriptRoot -Parent)
 git pull --ff-only
 cmake -B build -G "Visual Studio 17 2022" -A x64
 if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Smash_All Sog_All Dig_All --parallel
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Smash_All Sog_All Samt_All Dig_All --parallel
 if ($LASTEXITCODE -ne 0) { throw "build failed" }
 
 $dest = "$env:CommonProgramFiles\VST3"
-$plugins = "Scrub","ScrubPro","Harun","Smash","Sog","Dig"
+$plugins = "Scrub","ScrubPro","Harun","Smash","Sog","Samt","Dig"
 try {
   New-Item -ItemType Directory -Force -Path $dest | Out-Null
   foreach ($t in $plugins) {

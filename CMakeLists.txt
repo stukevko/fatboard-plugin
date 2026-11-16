@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Fatboard VERSION 0.13.0 LANGUAGES C CXX)
+project(Fatboard VERSION 0.14.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -211,6 +211,27 @@ target_sources(Sog PRIVATE
 fatboard_configure(Sog)
 target_include_directories(Sog PRIVATE Source/Sog)
 
+# ---- Samt (optical vocal leveller, stereo) -----------------------------------------
+juce_add_plugin(Samt
+  PRODUCT_NAME "Samt"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.samt"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Fsmt
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH FALSE
+  NEEDS_MIDI_INPUT FALSE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Fx Dynamics
+  AU_MAIN_TYPE kAudioUnitType_Effect)
+target_sources(Samt PRIVATE
+  Source/Samt/SamtProcessor.cpp Source/Samt/SamtProcessor.h
+  Source/Samt/SamtEditor.cpp Source/Samt/SamtEditor.h
+  Source/Samt/SamtEngine.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Samt)
+target_include_directories(Samt PRIVATE Source/Samt)
+
 # ---- Dig (PRIVATE tool, not a product: sample an old song – tempo, key, loop, chops) ----
 juce_add_plugin(Dig
   PRODUCT_NAME "Dig"
@@ -270,6 +291,12 @@ if(FATBOARD_BUILD_TESTS)
     target_compile_definitions(LicenseTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   endif()
   target_link_libraries(LicenseTest PRIVATE fatboard_ed25519 juce::juce_core juce::juce_events PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(SamtTest PRODUCT_NAME "SamtTest")
+  target_sources(SamtTest PRIVATE Tests/SamtTest.cpp)
+  target_include_directories(SamtTest PRIVATE Source/Samt)
+  target_compile_definitions(SamtTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(SamtTest PRIVATE juce::juce_dsp PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(DigTest PRODUCT_NAME "DigTest")
   target_sources(DigTest PRIVATE Tests/DigTest.cpp)
