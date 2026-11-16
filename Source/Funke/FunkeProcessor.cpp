@@ -88,7 +88,7 @@ juce::File FunkeProcessor::writeMidi (Layer which)
     std::vector<const std::vector<Funke::Note>*> layers;
     if (which == Chords || which == All) layers.push_back (&p->chords);
     if (which == Melody || which == All) layers.push_back (&p->melody);
-    if (which == Bass   || which == All) layers.push_back (&p->bass);
+    if (which == Bass) layers.push_back (&p->bass);       // not shown in the UI any more; "all" is chords + melody
     static const char* names[4] = { "chords", "melody", "bass", "idea" };
     static const char* keys[12] = { "C", "Cs", "D", "Ds", "E", "F", "Fs", "G", "Gs", "A", "As", "B" };
     const auto s = settingsNow();
@@ -143,7 +143,7 @@ void FunkeProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiB
             if (d >= 0.0 && d < blockBeats) trigger (kind, note, (int) (d * samplesPerBeat), samplesPerBeat);
         }
     };
-    fire (audioPattern->chords, Chords); fire (audioPattern->melody, Melody); fire (audioPattern->bass, Bass);
+    fire (audioPattern->chords, Chords); fire (audioPattern->melody, Melody);
 
     const float level = apvts.getRawParameterValue (kLevel)->load(); const float gain = level * level * 1.6f;
     const float twoPi = juce::MathConstants<float>::twoPi;

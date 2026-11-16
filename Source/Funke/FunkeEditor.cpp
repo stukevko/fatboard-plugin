@@ -74,8 +74,8 @@ FunkeEditor::FunkeEditor (FunkeProcessor& p) : AudioProcessorEditor (&p), proc (
     bars = std::make_unique<PillGroup> (*proc.apvts.getParameter (FunkeProcessor::kBars), "Length");
     drumMode = std::make_unique<PillGroup> (*proc.apvts.getParameter (FunkeProcessor::kDrumMode), "Against the drums");
     for (auto* g : { vibe.get(), key.get(), bars.get(), drumMode.get() }) addAndMakeVisible (*g);
-    static const char* names[3] = { "Chords", "Melody", "Bass" };
-    for (int i = 0; i < 3; ++i)
+    static const char* names[2] = { "Chords", "Melody" };
+    for (int i = 0; i < 2; ++i)
     {
         addAndMakeVisible (lanes[i]); addAndMakeVisible (newButtons[i]);
         newButtons[i].setButtonText ("New");
@@ -86,7 +86,7 @@ FunkeEditor::FunkeEditor (FunkeProcessor& p) : AudioProcessorEditor (&p), proc (
     rollAll.onClick = [this] { proc.roll (FunkeProcessor::All); };
     clearDrums.onClick = [this] { proc.clearDrums(); drumError.clear(); };
     clearDrums.setTooltip ("Forget the drum loop");
-    allMidi.setTooltip ("Drag from here: chords, melody and bass in one MIDI file");
+    allMidi.setTooltip ("Drag from here: chords and melody in one MIDI file");
     allMidi.addMouseListener (this, false);
     listenButton.setClickingTogglesState (true);
     listenAtt = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (proc.apvts, FunkeProcessor::kListen, listenButton);
@@ -94,7 +94,7 @@ FunkeEditor::FunkeEditor (FunkeProcessor& p) : AudioProcessorEditor (&p), proc (
     motionAtt  = std::make_unique<SliderAtt> (proc.apvts, FunkeProcessor::kMotion, motionKnob.slider);
     densityAtt = std::make_unique<SliderAtt> (proc.apvts, FunkeProcessor::kDensity, densityKnob.slider);
     levelAtt   = std::make_unique<SliderAtt> (proc.apvts, FunkeProcessor::kLevel, levelKnob.slider);
-    setSize (760, 810);
+    setSize (760, 760);
     startTimerHz (24);
     timerCallback();
 }
@@ -123,7 +123,6 @@ void FunkeEditor::timerCallback()
         {
             lanes[0].setNotes (p->chords, p->beats(), "Chords", p->chordNames);
             lanes[1].setNotes (p->melody, p->beats(), "Melody", {});
-            lanes[2].setNotes (p->bass, p->beats(), "Bass / 808", {});
         }
     }
     const double beat = proc.getPlayBeat();
@@ -161,9 +160,9 @@ void FunkeEditor::resized()
     drumStrip.setBounds (ds);
     r.removeFromTop (8);
     auto bottom = r.removeFromBottom (104);
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 2; ++i)
     {
-        auto lane = r.removeFromTop ((r.getHeight() - (2 - i) * 6) / (3 - i)); if (i < 2) r.removeFromTop (6);
+        auto lane = r.removeFromTop ((r.getHeight() - (1 - i) * 6) / (2 - i)); if (i < 1) r.removeFromTop (6);
         newButtons[i].setBounds (lane.removeFromRight (64).reduced (0, lane.getHeight() / 2 - 17)); lane.removeFromRight (8);
         lanes[i].setBounds (lane);
     }

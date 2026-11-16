@@ -44,8 +44,8 @@ private:
     FatboardHeader header { "Funke" };
     std::unique_ptr<PillGroup> vibe, key, bars, drumMode;
     DrumStrip drumStrip;
-    LaneView lanes[3];
-    juce::TextButton newButtons[3], rollAll { "New idea" }, listenButton { "Listen" }, allMidi { "Drag all" }, clearDrums { "x" };
+    LaneView lanes[2];
+    juce::TextButton newButtons[2], rollAll { "New idea" }, listenButton { "Listen" }, allMidi { "Drag all" }, clearDrums { "x" };
     BigKnob motionKnob { "Motion" }, densityKnob { "Density" }, levelKnob { "Level" };
     FatboardFooter footer { JucePlugin_VersionString };
     using SliderAtt = juce::AudioProcessorValueTreeState::SliderAttachment;
