@@ -232,6 +232,28 @@ target_sources(Samt PRIVATE
 fatboard_configure(Samt)
 target_include_directories(Samt PRIVATE Source/Samt)
 
+# ---- Funke (ideas as MIDI: chords, melody, bass per vibe; can follow a drum loop) ---
+juce_add_plugin(Funke
+  PRODUCT_NAME "Funke"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.funke"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Ffnk
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH TRUE
+  NEEDS_MIDI_INPUT TRUE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Instrument
+  AU_MAIN_TYPE kAudioUnitType_MusicDevice)
+target_sources(Funke PRIVATE
+  Source/Funke/FunkeProcessor.cpp Source/Funke/FunkeProcessor.h
+  Source/Funke/FunkeEditor.cpp Source/Funke/FunkeEditor.h
+  Source/Funke/FunkeGen.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Funke)
+target_compile_definitions(Funke PUBLIC JUCE_USE_MP3AUDIOFORMAT=1)
+target_include_directories(Funke PRIVATE Source/Funke)
+
 # ---- Dig (PRIVATE tool, not a product: sample an old song – tempo, key, loop, chops) ----
 juce_add_plugin(Dig
   PRODUCT_NAME "Dig"
@@ -291,6 +313,12 @@ if(FATBOARD_BUILD_TESTS)
     target_compile_definitions(LicenseTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
   endif()
   target_link_libraries(LicenseTest PRIVATE fatboard_ed25519 juce::juce_core juce::juce_events PUBLIC juce::juce_recommended_config_flags)
+
+  juce_add_console_app(FunkeTest PRODUCT_NAME "FunkeTest")
+  target_sources(FunkeTest PRIVATE Tests/FunkeTest.cpp)
+  target_include_directories(FunkeTest PRIVATE Source/Funke)
+  target_compile_definitions(FunkeTest PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+  target_link_libraries(FunkeTest PRIVATE juce::juce_audio_basics PUBLIC juce::juce_recommended_config_flags)
 
   juce_add_console_app(SamtTest PRODUCT_NAME "SamtTest")
   target_sources(SamtTest PRIVATE Tests/SamtTest.cpp)
