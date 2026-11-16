@@ -10,11 +10,11 @@ command -v cmake >/dev/null 2>&1 || { echo "CMake is missing. Run:  brew install
 
 git pull --ff-only || echo "(could not pull, building what is here)"
 cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Smash_All Sog_All Samt_All Funke_All Dig_All --parallel "$(sysctl -n hw.ncpu)"
+cmake --build build --config Release --target Scrub_All ScrubPro_All Harun_All Smash_All Sog_All Samt_All Funke_All Dig_All Tap_All --parallel "$(sysctl -n hw.ncpu)"
 
 VST="$HOME/Library/Audio/Plug-Ins/VST3"; AU="$HOME/Library/Audio/Plug-Ins/Components"
 mkdir -p "$VST" "$AU"
-for t in Scrub ScrubPro Harun Smash Sog Samt Funke Dig; do
+for t in Scrub ScrubPro Harun Smash Sog Samt Funke Dig Tap; do
   for kind in VST3 AU; do
     dir="build/${t}_artefacts/Release/$kind"; [ -d "$dir" ] || continue
     dest="$VST"; [ "$kind" = AU ] && dest="$AU"

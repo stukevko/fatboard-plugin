@@ -276,6 +276,28 @@ fatboard_configure(Dig)
 target_compile_definitions(Dig PUBLIC JUCE_USE_MP3AUDIOFORMAT=1)
 target_include_directories(Dig PRIVATE Source/Dig)
 
+# ---- Tap (PRIVATE tool: finger drumming on Q W E R, records a loop, drags out MIDI) ----
+juce_add_plugin(Tap
+  PRODUCT_NAME "Tap"
+  COMPANY_NAME "Fatboard"
+  BUNDLE_ID "com.fatboard.tap"
+  PLUGIN_MANUFACTURER_CODE Fatb
+  PLUGIN_CODE Ftap
+  FORMATS ${FATBOARD_FORMATS}
+  IS_SYNTH TRUE
+  NEEDS_MIDI_INPUT TRUE
+  EDITOR_WANTS_KEYBOARD_FOCUS TRUE
+  COPY_PLUGIN_AFTER_BUILD FALSE
+  VST3_CATEGORIES Instrument Drum
+  AU_MAIN_TYPE kAudioUnitType_MusicDevice)
+target_sources(Tap PRIVATE
+  Source/Tap/TapProcessor.cpp Source/Tap/TapProcessor.h
+  Source/Tap/TapEditor.cpp Source/Tap/TapEditor.h
+  ${FATBOARD_COMMON_SOURCES})
+fatboard_configure(Tap)
+target_compile_definitions(Tap PUBLIC JUCE_USE_MP3AUDIOFORMAT=1)
+target_include_directories(Tap PRIVATE Source/Tap)
+
 # ---- Offline engine test (optional) -----------------------------------------
 option(FATBOARD_BUILD_TESTS "Build the offline engine test" OFF)
 if(FATBOARD_BUILD_TESTS)
